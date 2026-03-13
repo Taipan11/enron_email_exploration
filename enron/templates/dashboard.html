@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Dashboard Global</h1>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-header">Messages</div>
+                <div class="card-body">
+                    <h3>{{ summary.total_messages }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-header">Collaborateurs</div>
+                <div class="card-body">
+                    <h3>{{ summary.total_collaborators }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-header">Mailboxes</div>
+                <div class="card-body">
+                    <h3>{{ summary.total_mailboxes }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-header">Pièces jointes</div>
+                <div class="card-body">
+                    <h3>{{ summary.total_attachments }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-header">Message avec reponses</div>
+                <div class="card-body">
+                    <h3>{{ message_with_response }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            Volume de mails par mois
+        </div>
+        <div class="card-body">
+            {% if mails_per_month %}
+                <div class="table-responsive">
+                    <table class="table table-striped table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Mois</th>
+                                <th>Nombre de mails</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in mails_per_month %}
+                            <tr>
+                                <td>{{ row.month|date:"Y-m" }}</td>
+                                <td>{{ row.message_count }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted mb-0">Aucune donnée disponible.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            Top 10 des expéditeurs les plus actifs
+        </div>
+        <div class="card-body">
+            {% if top_senders %}
+                <div class="table-responsive">
+                    <table class="table table-striped table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Rang</th>
+                                <th>Expéditeur</th>
+                                <th>Nombre de mails</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in top_senders %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>{{ row.sender_email }}</td>
+                                <td>{{ row.message_count }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted mb-0">Aucune donnée disponible.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

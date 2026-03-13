@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="mb-3">
+        <a href="{% url 'collaborator_detail' collaborator.id %}" class="btn btn-outline-secondary btn-sm">
+            ← Retour au collaborateur
+        </a>
+    </div>
+
+    <h1 class="mb-3">
+        Emails sent by {{ collaborator.display_name|default:collaborator.employee_key }}
+    </h1>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            Collaborateur
+        </div>
+        <div class="card-body">
+            <p><strong>ID :</strong> {{ collaborator.id }}</p>
+            <p><strong>Employee key :</strong> {{ collaborator.employee_key }}</p>
+            <p><strong>Nom :</strong> {{ collaborator.display_name|default:"-" }}</p>
+            <p><strong>Poste :</strong> {{ collaborator.position_title|default:"-" }}</p>
+            <p><strong>Nombre d'alias :</strong> {{ aliases|length }}</p>
+
+            <p class="mb-1"><strong>Alias email :</strong></p>
+            {% if aliases %}
+                <ul class="mb-0">
+                    {% for alias in aliases %}
+                        <li>{{ alias.email }}</li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-muted mb-0">Aucun alias email trouvé.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            Liste des emails envoyés
+        </div>
+        <div class="card-body">
+            {% if messages %}
+                <p><strong>Total :</strong> {{ messages|length }} message(s)</p>
+
+                <div class="table-responsive">
+                    <table class="table table-striped table-bordered align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>Date</th>
+                                <th>Sender email</th>
+                                <th>Sujet</th>
+                                <th>Pièces jointes</th>
+                                <th>Réponse</th>
+                                <th>Forward</th>
+                                <th>Parse OK</th>
+                                <th>Thread root</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for msg in messages %}
+                            <tr>
+                                <td>{{ msg.id }}</td>
+                                <td>{{ msg.sent_at|default:"-" }}</td>
+                                <td>{{ msg.sender_email|default:"-" }}</td>
+                                <td>{{ msg.subject_normalized|default:"(sans sujet)" }}</td>
+                                <td>
+                                    {% if msg.has_attachments %}
+                                        Oui ({{ msg.attachment_count }})
+                                    {% else %}
+                                        Non
+                                    {% endif %}
+                                </td>
+                                <td>{% if msg.is_response %}Oui{% else %}Non{% endif %}</td>
+                                <td>{% if msg.is_forward %}Oui{% else %}Non{% endif %}</td>
+                                <td>
+                                    {% if msg.parse_ok %}
+                                        <span class="badge bg-success">Oui</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Non</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ msg.thread_root_message_id|default:"-" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted mb-0">Aucun email envoyé trouvé pour ce collaborateur.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="mb-3">
+        <a href="{% url 'collaborator_list' %}" class="btn btn-outline-secondary btn-sm">
+            ← Retour à la liste
+        </a>
+    </div>
+
+    <h1 class="mb-4">
+        {{ collaborator.display_name|default:collaborator.employee_key }}
+    </h1>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            Informations générales
+        </div>
+        <div class="card-body">
+            <p><strong>ID :</strong> {{ collaborator.id }}</p>
+            <p><strong>Employee key :</strong> {{ collaborator.employee_key }}</p>
+            <p><strong>Prénom :</strong> {{ collaborator.first_name|default:"-" }}</p>
+            <p><strong>Nom :</strong> {{ collaborator.last_name|default:"-" }}</p>
+            <p><strong>Nom affiché :</strong> {{ collaborator.display_name|default:"-" }}</p>
+            <p><strong>Poste :</strong> {{ collaborator.position_title|default:"-" }}</p>
+            <p>
+                <strong>Employé Enron :</strong>
+                {% if collaborator.is_enron_employee %}
+                    <span class="badge bg-success">Oui</span>
+                {% else %}
+                    <span class="badge bg-secondary">Non</span>
+                {% endif %}
+            </p>
+            <p><strong>Notes :</strong> {{ collaborator.notes|default:"-" }}</p>
+            <div class="mb-3">
+                <a href="{% url 'collaborator_sent_messages' collaborator.id %}" class="btn btn-primary btn-sm">
+                    View all emails sent
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            Adresses email associées
+        </div>
+        <div class="card-body">
+            {% if emails %}
+                <ul class="mb-0">
+                    {% for email in emails %}
+                        <li>
+                            <strong>{{ email.email }}</strong>
+                            <span class="text-muted">
+                                (local_part: {{ email.local_part }}, domain: {{ email.domain }})
+                            </span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-muted mb-0">Aucune adresse email associée.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            Mailboxes et folders
+        </div>
+        <div class="card-body">
+            {% if mailboxes %}
+                {% for mailbox in mailboxes %}
+                    <div class="border rounded p-3 mb-3">
+                        <h5>{{ mailbox.mailbox_key }}</h5>
+                        <p class="mb-2">
+                            <strong>Chemin source :</strong>
+                            {{ mailbox.source_root_path|default:"-" }}
+                        </p>
+
+                        {% if mailbox.folders %}
+                            <div class="table-responsive">
+                                <table class="table table-sm table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Folder name</th>
+                                            <th>Folder path</th>
+                                            <th>Folder type</th>
+                                            <th>Folder topic</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for folder in mailbox.folders %}
+                                        <tr>
+                                            <td>{{ folder.id }}</td>
+                                             <td>
+                                                <a href="{% url 'folder_detail' folder.id %}">
+                                                    {{ folder.folder_name }}
+                                                </a>
+                                            </td>
+                                            <td>{{ folder.folder_path }}</td>
+                                            <td>{{ folder.folder_type|default:"-" }}</td>
+                                            <td>{{ folder.folder_topic|default:"-" }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <p class="text-muted mb-0">Aucun folder pour cette mailbox.</p>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-muted mb-0">Aucune mailbox associée à ce collaborateur.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

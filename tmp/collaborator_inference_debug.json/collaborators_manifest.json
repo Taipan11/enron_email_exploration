@@ -1,0 +1,13 @@
+{
+  "status": "success",
+  "generated_at_utc": "2026-03-12T17:24:43.247590+00:00",
+  "source_root": "/app/data/enron/maildir",
+  "max_messages_per_mailbox": 1000,
+  "max_mailboxes": 20,
+  "row_count": 20,
+  "files": {
+    "csv": "/app/tmp/collaborator_inference_debug.json/collaborators_profile.csv",
+    "summary_json": "/app/tmp/collaborator_inference_debug.json/collaborators_summary.json",
+    "tables_json": "/app/tmp/collaborator_inference_debug.json/collaborators_tables.json"
+  }
+}
