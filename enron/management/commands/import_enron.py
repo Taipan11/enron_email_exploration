@@ -1,17 +1,18 @@
 from __future__ import annotations
 
+from argparse import ArgumentParser
 from pathlib import Path
 from time import perf_counter
 
 from django.core.management.base import BaseCommand, CommandError
 
-from enron.services.enron_import_service import EnronImportService
+from enron.create_database.enron_import_service import EnronImportService
 
 
 class Command(BaseCommand):
     help = "Importe les emails Enron depuis un répertoire maildir."
 
-    def add_arguments(self, parser) -> None:
+    def add_arguments(self, parser: ArgumentParser) -> None:
         parser.add_argument(
             "--root",
             type=str,
@@ -48,43 +49,44 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options) -> None:
-        root = Path(options["root"]).expanduser().resolve()
-        if not root.exists():
-            raise CommandError(f"Le répertoire racine n'existe pas : {root}")
-
-        if not root.is_dir():
-            raise CommandError(f"Le chemin racine n'est pas un répertoire : {root}")
-
-        debug_output_path = options.get("debug_output_path")
-        debug_path = (
-            Path(debug_output_path).expanduser().resolve()
-            if debug_output_path
-            else None
-        )
+        root = self._resolve_root(options["root"])
+        debug_path = self._resolve_debug_path(options.get("debug_output_path"))
 
         service = EnronImportService()
 
         self.stdout.write(self.style.NOTICE("Démarrage de l'import Enron..."))
         self.stdout.write(f"Racine : {root}")
-        if options.get("max_mailboxes") is not None:
-            self.stdout.write(f"Max mailboxes : {options['max_mailboxes']}")
-        if options.get("max_files_per_mailbox") is not None:
-            self.stdout.write(
-                f"Max fichiers par mailbox : {options['max_files_per_mailbox']}"
-            )
+
+        max_mailboxes = options.get("max_mailboxes")
+        max_files_per_mailbox = options.get("max_files_per_mailbox")
+        persist_invalid = options.get("persist_invalid", False)
+        stop_on_error = options.get("stop_on_error", False)
+
+        if max_mailboxes is not None:
+            self.stdout.write(f"Max mailboxes : {max_mailboxes}")
+
+        if max_files_per_mailbox is not None:
+            self.stdout.write(f"Max fichiers par mailbox : {max_files_per_mailbox}")
+
+        self.stdout.write(f"Persister les invalides : {'oui' if persist_invalid else 'non'}")
+        self.stdout.write(f"Arrêt sur erreur : {'oui' if stop_on_error else 'non'}")
+
         if debug_path is not None:
             self.stdout.write(f"Fichier de debug : {debug_path}")
 
         started_at = perf_counter()
 
-        report = service.run(
-            root=root,
-            max_mailboxes=options.get("max_mailboxes"),
-            max_files_per_mailbox=options.get("max_files_per_mailbox"),
-            stop_on_error=options.get("stop_on_error", False),
-            persist_invalid=options.get("persist_invalid", False),
-            debug_output_path=debug_path,
-        )
+        try:
+            report = service.run(
+                root=root,
+                max_mailboxes=max_mailboxes,
+                max_files_per_mailbox=max_files_per_mailbox,
+                stop_on_error=stop_on_error,
+                persist_invalid=persist_invalid,
+                debug_output_path=debug_path,
+            )
+        except Exception as exc:
+            raise CommandError(f"Échec de l'import Enron : {type(exc).__name__}: {exc}") from exc
 
         elapsed = perf_counter() - started_at
 
@@ -100,32 +102,69 @@ class Command(BaseCommand):
         self.stdout.write(f"Erreurs de parsing : {report.total_parse_errors}")
         self.stdout.write(f"Warnings : {report.total_warnings}")
 
-        if report.processing_errors:
-            self.stdout.write("")
-            self.stdout.write(self.style.WARNING("Erreurs de traitement :"))
-            for message in report.processing_errors[:20]:
-                self.stdout.write(f"- {message}")
-            if len(report.processing_errors) > 20:
-                self.stdout.write(
-                    f"... {len(report.processing_errors) - 20} erreurs supplémentaires"
-                )
+        self._print_messages(
+            title="Erreurs de traitement",
+            messages=report.processing_errors,
+            style=self.style.WARNING,
+        )
+        self._print_messages(
+            title="Erreurs de validation",
+            messages=report.validation_errors,
+            style=self.style.WARNING,
+        )
+        self._print_messages(
+            title="Warnings de validation",
+            messages=report.validation_warnings,
+            style=self.style.WARNING,
+        )
 
-        if report.validation_errors:
-            self.stdout.write("")
-            self.stdout.write(self.style.WARNING("Erreurs de validation :"))
-            for message in report.validation_errors[:20]:
-                self.stdout.write(f"- {message}")
-            if len(report.validation_errors) > 20:
-                self.stdout.write(
-                    f"... {len(report.validation_errors) - 20} erreurs supplémentaires"
-                )
+    def _resolve_root(self, raw_root: str) -> Path:
+        root = Path(raw_root).expanduser().resolve()
 
-        if report.validation_warnings:
-            self.stdout.write("")
-            self.stdout.write(self.style.WARNING("Warnings de validation :"))
-            for message in report.validation_warnings[:20]:
-                self.stdout.write(f"- {message}")
-            if len(report.validation_warnings) > 20:
-                self.stdout.write(
-                    f"... {len(report.validation_warnings) - 20} warnings supplémentaires"
-                )
+        if not root.exists():
+            raise CommandError(f"Le répertoire racine n'existe pas : {root}")
+
+        if not root.is_dir():
+            raise CommandError(f"Le chemin racine n'est pas un répertoire : {root}")
+
+        return root
+
+    def _resolve_debug_path(self, raw_debug_path: str | None) -> Path | None:
+        if not raw_debug_path:
+            return None
+
+        debug_path = Path(raw_debug_path).expanduser().resolve()
+
+        parent = debug_path.parent
+        if not parent.exists():
+            raise CommandError(
+                f"Le dossier parent du fichier de debug n'existe pas : {parent}"
+            )
+
+        if not parent.is_dir():
+            raise CommandError(
+                f"Le parent du fichier de debug n'est pas un répertoire : {parent}"
+            )
+
+        return debug_path
+
+    def _print_messages(
+        self,
+        *,
+        title: str,
+        messages: list[str],
+        style,
+        max_items: int = 20,
+    ) -> None:
+        if not messages:
+            return
+
+        self.stdout.write("")
+        self.stdout.write(style(f"{title} :"))
+
+        for message in messages[:max_items]:
+            self.stdout.write(f"- {message}")
+
+        remaining = len(messages) - max_items
+        if remaining > 0:
+            self.stdout.write(f"... {remaining} éléments supplémentaires")

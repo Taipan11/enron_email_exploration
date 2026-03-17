@@ -4,16 +4,16 @@ from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
 
-from enron.services.inference.collaborator_inference_service import (
+from enron.inference.collaborator_inference_service import (
     CollaboratorInferenceService,
 )
-from enron.services.persistence.collaborator_persistence_service import (
+from enron.persistence.collaborator_persistence_service import (
     CollaboratorPersistenceService,
 )
-from enron.services.inference.mailbox_alias_inference_service import (
+from enron.inference.mailbox_alias_inference_service import (
     MailboxAliasInferenceService,
 )
-from enron.services.persistence.alias_persistence_service import (
+from enron.persistence.alias_persistence_service import (
     CollaboratorAliasPersistenceService,
 )
 

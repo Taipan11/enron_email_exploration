@@ -1,7 +1,11 @@
 from django.db import models
+from django.db.models.functions import Coalesce, Left
+from django.contrib.postgres.indexes import GinIndex
+from django.contrib.postgres.search import SearchVector
 
 from .base import TimeStampedModel
 from .email_address import EmailAddress
+
 
 class Message(TimeStampedModel):
     message_id = models.CharField(max_length=500, unique=True, db_index=True)
@@ -45,4 +49,20 @@ class Message(TimeStampedModel):
             models.Index(fields=["sender_email"]),
             models.Index(fields=["thread_root_message_id"]),
             models.Index(fields=["in_reply_to"]),
+            GinIndex(
+                SearchVector(
+                    Coalesce(
+                        "subject_normalized",
+                        models.Value("", output_field=models.TextField()),
+                        output_field=models.TextField(),
+                    ),
+                    Coalesce(
+                        Left("body_clean", 200000),
+                        models.Value("", output_field=models.TextField()),
+                        output_field=models.TextField(),
+                    ),
+                    config="english",
+                ),
+                name="message_fts_gin_idx",
+            ),
         ]

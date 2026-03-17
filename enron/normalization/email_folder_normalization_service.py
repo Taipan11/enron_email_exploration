@@ -221,10 +221,6 @@ class EmailFolderNormalizationService:
         record = self.build_record(file_path=file_path, root=root)
         return record.folder_name
     
-    def get_folder_name_from_path(self, file_path: Path, root: Path) -> str | None:
-        record = self.build_record(file_path=file_path, root=root)
-        return record.folder_name
-    
     def is_email_file(self, file_path: Path) -> bool:
         return file_path.is_file() and not file_path.name.startswith(".")
     

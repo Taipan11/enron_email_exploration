@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 
-from enron.services.resolve.message_thread_resolver_service import (
+from enron.resolve.message_thread_resolver_service import (
     MessageThreadResolverService,
 )
 

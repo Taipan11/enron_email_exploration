@@ -7,10 +7,10 @@ import pandas as pd
 from django.db import transaction
 
 from enron.models import Collaborator, EmailAddress
-from enron.services.normalization.email_folder_normalization_service import (
+from enron.normalization.email_folder_normalization_service import (
     EmailFolderNormalizationService,
 )
-from enron.services.normalization.email_normalization_service import (
+from enron.normalization.email_normalization_service import (
     EmailNormalizationService,
 )
 

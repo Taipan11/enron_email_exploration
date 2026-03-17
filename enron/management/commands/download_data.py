@@ -4,7 +4,7 @@ from time import perf_counter
 
 from django.core.management.base import BaseCommand
 
-from enron.services.download_enron.dowload_enron import download_enron
+from enron.download_enron.dowload_enron import download_enron
 
 
 class Command(BaseCommand):

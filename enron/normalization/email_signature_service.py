@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-from enron.services.normalization.email_normalization_service import EmailNormalizationService
+from enron.normalization.email_normalization_service import EmailNormalizationService
 
 
 class EmailSignatureService:

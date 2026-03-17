@@ -11,16 +11,16 @@ from typing import Any
 
 import pandas as pd
 
-from enron.services.normalization.email_normalization_service import (
+from enron.normalization.email_normalization_service import (
     EmailNormalizationService,
 )
-from enron.services.normalization.email_folder_normalization_service import (
+from enron.normalization.email_folder_normalization_service import (
     EmailFolderNormalizationService,
 )
-from enron.services.normalization.identity_normalization_service import (
+from enron.normalization.identity_normalization_service import (
     IdentityNormalizationService,
 )
-from enron.services.normalization.filesystem_exploration_service import (
+from enron.normalization.filesystem_exploration_service import (
     EmailFilesystemExplorationService,
 )
 from enron.domain.collaborator_payloads import CollaboratorInferenceResult

@@ -45,6 +45,17 @@ class EmailNormalizationService:
     _HTML_BR_RE = re.compile(r"(?i)<br\s*/?>")
     _HTML_P_RE = re.compile(r"(?i)</p\s*>")
     _HTML_TAG_RE = re.compile(r"(?s)<[^>]+>")
+    
+    _QUOTED_LINE_RE = re.compile(r"^\s*>+")
+    _ON_WROTE_RE = re.compile(r"(?im)^\s*on .+ wrote:\s*$")
+    _ORIGINAL_MESSAGE_RE = re.compile(r"(?im)^\s*-{2,}\s*original message\s*-{2,}\s*$")
+    _FORWARDED_MESSAGE_RE = re.compile(
+        r"(?im)^\s*(?:begin forwarded message|[- ]*forwarded by|[- ]*forwarded message)\b"
+    )
+    _QUOTED_HEADER_BLOCK_RE = re.compile(
+        r"(?im)^\s*(from|sent|to|cc|bcc|subject|date)\s*:\s+.+$"
+    )
+    
     def normalize_text(self, value: str | None) -> str | None:
         """
         Nettoie un texte simple :
@@ -411,10 +422,7 @@ class EmailNormalizationService:
         if not email or "@" not in email:
             return None
         return email.split("@", 1)[0].lower()
-    
-    def is_internal_enron_email(self, email: str | None) -> bool:
-        domain = self.extract_email_domain(email)
-        return domain == "enron.com"
+
 
     def derive_name_from_email(self, email: str | None, generic_localparts: set[str]) -> str | None:
         localpart = self.extract_email_localpart(email)
@@ -438,12 +446,51 @@ class EmailNormalizationService:
         value = re.sub(r"\s*\(e-mail\)\s*$", "", value, flags=re.IGNORECASE).strip()
         value = re.sub(r"\s*<[^>]+>\s*$", "", value).strip()
         return self.normalize_text(value)
+    
+    def normalize_subject_for_threading(self, subject: str | None) -> str | None:
+        return self.normalize_subject(subject)
 
-    def extract_xfrom_name(self, value: str | None) -> str | None:
-        value = self.normalize_text(value)
+    def body_looks_like_reply(self, value: str | None) -> bool:
+        value = self.normalize_body_text(value)
         if not value:
-            return None
+            return False
 
-        value = re.sub(r"\s*\(e-mail\)\s*$", "", value, flags=re.IGNORECASE).strip()
-        value = re.sub(r"\s*<[^>]+>\s*$", "", value).strip()
-        return self.normalize_text(value)
+        if self.count_quoted_lines(value) > 0:
+            return True
+        if self._ON_WROTE_RE.search(value):
+            return True
+        if self._ORIGINAL_MESSAGE_RE.search(value):
+            return True
+        if len(self.extract_quoted_header_lines(value)) >= 2:
+            return True
+
+        return False
+
+    def body_looks_like_forward(self, value: str | None) -> bool:
+        value = self.normalize_body_text(value)
+        if not value:
+            return False
+
+        if self._FORWARDED_MESSAGE_RE.search(value):
+            return True
+        if self._ORIGINAL_MESSAGE_RE.search(value):
+            return True
+
+        header_lines = self.extract_quoted_header_lines(value)
+        if len(header_lines) >= 3 and any(
+            line.lower().startswith("subject:") for line in header_lines
+        ):
+            return True
+
+        return False
+    
+    def extract_quoted_header_lines(self, value: str | None) -> list[str]:
+        value = self.normalize_body_text(value)
+        if not value:
+            return []
+
+        result: list[str] = []
+        for line in value.splitlines():
+            if self._QUOTED_HEADER_BLOCK_RE.match(line):
+                result.append(line.strip())
+        return result
