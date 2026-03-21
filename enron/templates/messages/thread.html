@@ -1,90 +1,82 @@
 {% extends "base.html" %}
 
+{% block title %}Thread | Enron Explorer{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
-    <div class="mb-3">
-        <a href="javascript:history.back()" class="btn btn-outline-secondary btn-sm">
-            ← Retour
-        </a>
-    </div>
+<div class="mb-4">
+    <a href="{% url 'message_detail' current_message.id %}" class="btn btn-outline-secondary btn-sm mb-3">
+        ← Retour au message
+    </a>
 
-    <h1 class="mb-3">Conversation complète</h1>
+    <h1 class="page-title mb-1">
+        Conversation email
+    </h1>
+    <p class="page-subtitle mb-0">
+        Visualisation du fil de discussion autour d’un message.
+    </p>
+</div>
 
-    <div class="card mb-4">
-        <div class="card-header">
-            Message courant
-        </div>
-        <div class="card-body">
-            <p><strong>ID :</strong> {{ current_message.id }}</p>
-            <p><strong>Message-ID :</strong> {{ current_message.message_id }}</p>
-            <p><strong>Sujet :</strong> {{ current_message.subject_normalized|default:"(sans sujet)" }}</p>
-            <p><strong>Expéditeur :</strong> {{ current_message.sender_email|default:"-" }}</p>
-            <p><strong>Date :</strong> {{ current_message.sent_at|default:"-" }}</p>
-            <p><strong>Thread root :</strong> {{ current_message.thread_root_message_id|default:"-" }}</p>
-            <p><strong>In-Reply-To :</strong> {{ current_message.in_reply_to|default:"-" }}</p>
-            <p><strong>Response to :</strong> {{ current_message.response_to_message_id|default:"-" }}</p>
-        </div>
-    </div>
+<div class="card panel-card">
+    <div class="card-body">
 
-    <div class="card">
-        <div class="card-header">
-            Messages de la conversation
-        </div>
-        <div class="card-body">
-            {% if thread_messages %}
-                <p><strong>Total :</strong> {{ thread_messages|length }} message(s)</p>
+        {% if thread_messages %}
+            <div class="d-flex flex-column gap-4">
 
-                <div class="table-responsive">
-                    <table class="table table-striped table-bordered align-middle">
-                        <thead class="table-light">
-                            <tr>
-                                <th>ID</th>
-                                <th>Date</th>
-                                <th>Expéditeur</th>
-                                <th>Sujet</th>
-                                <th>Réponse</th>
-                                <th>Forward</th>
-                                <th>Pièces jointes</th>
-                                <th>Parse OK</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for msg in thread_messages %}
-                            <tr {% if msg.id == current_message.id %}class="table-primary"{% endif %}>
-                                <td>{{ msg.id }}</td>
-                                <td>{{ msg.sent_at|default:"-" }}</td>
-                                <td>{{ msg.sender_email|default:"-" }}</td>
-                                <td>
-                                    {{ msg.subject_normalized|default:"(sans sujet)" }}
-                                    {% if msg.id == current_message.id %}
-                                        <span class="badge bg-primary ms-2">Courant</span>
-                                    {% endif %}
-                                </td>
-                                <td>{% if msg.is_response %}Oui{% else %}Non{% endif %}</td>
-                                <td>{% if msg.is_forward %}Oui{% else %}Non{% endif %}</td>
-                                <td>
-                                    {% if msg.has_attachments %}
-                                        Oui ({{ msg.attachment_count }})
-                                    {% else %}
-                                        Non
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if msg.parse_ok %}
-                                        <span class="badge bg-success">Oui</span>
-                                    {% else %}
-                                        <span class="badge bg-danger">Non</span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                {% for msg in thread_messages %}
+                <div class="p-4 rounded-4 border {% if msg.id == current_message.id %}border-primary shadow-sm{% else %}border-light{% endif %} bg-white">
+
+                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+                        <div>
+                            <div class="fw-semibold">
+                                {{ msg.sender_email|default:"(unknown)" }}
+                            </div>
+                            <div class="small text-muted">
+                                {{ msg.sent_at|default:"-" }}
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2 flex-wrap">
+                            {% if msg.is_response %}
+                                <span class="badge bg-info-subtle text-info-emphasis border">Réponse</span>
+                            {% endif %}
+                            {% if msg.is_forward %}
+                                <span class="badge bg-primary-subtle text-primary-emphasis border">Forward</span>
+                            {% endif %}
+                            {% if msg.has_attachments %}
+                                <span class="badge bg-warning-subtle text-warning-emphasis border">
+                                    📎 {{ msg.attachment_count }}
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-2 fw-semibold">
+                        {{ msg.subject_normalized|default:"(sans sujet)" }}
+                    </div>
+
+                    <div class="small text-muted mb-2">
+                        Message ID :
+                        <code>{{ msg.message_id }}</code>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <div class="small text-muted">
+                            Depth: {{ msg.references_depth }}
+                        </div>
+
+                        <a href="{% url 'message_detail' msg.id %}" class="btn btn-sm btn-outline-primary">
+                            Voir détail
+                        </a>
+                    </div>
+
                 </div>
-            {% else %}
-                <p class="text-muted mb-0">Aucun message trouvé pour cette conversation.</p>
-            {% endif %}
-        </div>
+                {% endfor %}
+
+            </div>
+        {% else %}
+            <p class="text-muted mb-0">Aucun message dans ce thread.</p>
+        {% endif %}
+
     </div>
 </div>
 {% endblock %}

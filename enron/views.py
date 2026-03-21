@@ -1,14 +1,17 @@
 from django.shortcuts import render
 
 # Create your views here.
-from django.shortcuts import render
-from django.db import connection
-from django.http import Http404
+from django.shortcuts import render # Import de la fonction render pour afficher les templates (renvoyer une page HTML en lui passant des données)
+from django.db import connection # Import de l'objet connection pour exécuter des requêtes SQL brutes
+from django.http import Http404 # Import de l'exception Http404 pour gérer les cas où une ressource n'est pas trouvée (ex: un collaborateur ou un message qui n'existe pas)
+import json # Import du module json pour convertir des données Python en JSON (utile pour les graphiques dans le dashboard)
+# car JavaScript a besoin des donnees JSON pour chart.js
 
 
-def collaborator_list(request):
+def collaborator_list(request): # Vue pour afficher la liste des collaborateurs avec un champ de recherche (filtre les collaborateurs en fonction de la requête de recherche)
     q = (request.GET.get("q") or "").strip()
 
+# La requête SQL ci-dessous sélectionne les collaborateurs et compte le nombre d'adresses email associées à chacun, 
     sql = """
         SELECT
             c.id,
@@ -62,7 +65,7 @@ def collaborator_list(request):
 
 
 
-def collaborator_detail(request, collaborator_id):
+def collaborator_detail(request, collaborator_id): # Vue pour afficher les détails d'un collaborateur, y compris ses adresses email, ses mailboxes et dossiers associés, et ses contacts les plus fréquents (exécute plusieurs requêtes SQL pour récupérer toutes ces informations)
     collaborator_sql = """
         SELECT
             c.id,
@@ -154,15 +157,42 @@ def collaborator_detail(request, collaborator_id):
     mailboxes = list(mailboxes_map.values())
     total_folders = sum(len(mailbox["folders"]) for mailbox in mailboxes)
 
+        top_contacts_sql = """
+        SELECT
+            ea.email AS contact_email,
+            COUNT(*) AS interaction_count
+        FROM enron_message msg
+        JOIN enron_messagerecipient mr
+            ON mr.message_id = msg.id
+        JOIN enron_emailaddress ea
+            ON ea.id = mr.email_address_id
+        LEFT JOIN enron_emailaddress se
+            ON se.id = msg.sender_id
+        WHERE
+            se.collaborator_id = %s
+        GROUP BY ea.email
+        ORDER BY interaction_count DESC
+        LIMIT 10
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute(top_contacts_sql, [collaborator_id])
+        contact_columns = [col[0] for col in cursor.description]
+        top_contacts = [
+            dict(zip(contact_columns, row))
+            for row in cursor.fetchall()
+        ]
+
     return render(request, "collaborators/detail.html", {
         "collaborator": collaborator,
         "emails": emails,
         "mailboxes": mailboxes,
         "total_folders": total_folders,
+        "top_contacts": top_contacts,
     })
 
 
-def folder_detail(request, folder_id):
+def folder_detail(request, folder_id): # Vue pour afficher les détails d'un dossier, y compris les messages qu'il contient (exécute une requête SQL pour récupérer les infos du dossier et une autre pour récupérer les messages associés)
     folder_sql = """
         SELECT
             f.id,
@@ -234,7 +264,7 @@ def folder_detail(request, folder_id):
         "messages": messages,
     })
 
-def message_detail(request, occurrence_id):
+def message_detail(request, occurrence_id): # Vue pour afficher les détails d'un message, y compris ses destinataires, ses pièces jointes et les messages référencés (exécute plusieurs requêtes SQL pour récupérer toutes ces informations)
     occurrence_sql = """
         SELECT
             mo.id AS occurrence_id,
@@ -389,7 +419,7 @@ def message_detail(request, occurrence_id):
     })
 
 
-def collaborator_sent_messages(request, collaborator_id):
+def collaborator_sent_messages(request, collaborator_id): # Vue pour afficher les messages envoyés par un collaborateur, y compris les messages envoyés depuis ses différentes adresses email (exécute plusieurs requêtes SQL pour récupérer toutes ces informations)
     collaborator_sql = """
         SELECT
             c.id,
@@ -472,7 +502,7 @@ def collaborator_sent_messages(request, collaborator_id):
     })
 
 
-def message_thread(request, message_id):
+def message_thread(request, message_id): # Vue pour afficher le fil de discussion d'un message, y compris les messages précédents et suivants dans le même thread (exécute plusieurs requêtes SQL pour récupérer toutes ces informations)
     current_message_sql = """
         SELECT
             m.id,
@@ -569,7 +599,8 @@ from django.http import Http404
 import json
 
 
-def dashboard(request):
+def dashboard(request): # Vue pour afficher le dashboard avec les statistiques globales et les graphiques (prépare toutes les données du dashboard.)
+    # request contient les infos sur la requête du navigateur,la fonction exécute les calculs, puis renvoie la page dashboard.html
     summary_sql = """
         SELECT
             (SELECT COUNT(*) FROM enron_message) AS total_messages,
@@ -577,8 +608,8 @@ def dashboard(request):
             (SELECT COUNT(*) FROM enron_mailbox) AS total_mailboxes,
             (SELECT COUNT(*) FROM enron_attachment) AS total_attachments
     """
-
-    mails_per_month_sql = """
+# calcule le nombre de messages envoyés par mois. DATE_TRUNC('month', sent_at) tronque une date au début du mois, permettant de regrouper tous les messages d'un mm mois
+    mails_per_month_sql = """ 
         SELECT
             DATE_TRUNC('month', sent_at) AS month,
             COUNT(*) AS message_count
@@ -587,7 +618,7 @@ def dashboard(request):
         GROUP BY DATE_TRUNC('month', sent_at)
         ORDER BY month ASC
     """
-
+# Elle récupère les 10 expéditeurs les plus actifs. COALESCE(sender_email, '(unknown)') gère les cas où sender_email est NULL en affichant '(unknown)' à la place.
     top_senders_sql = """
         SELECT
             COALESCE(sender_email, '(unknown)') AS sender_email,
@@ -597,7 +628,7 @@ def dashboard(request):
         ORDER BY message_count DESC, sender_email ASC
         LIMIT 10
     """
-
+# Elle compte les messages pour lesquels on a une référence à un message parent.
     message_with_response_id_sql = """
         SELECT COUNT(*) AS message_with_response_count
         FROM enron_message

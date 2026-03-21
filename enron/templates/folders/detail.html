@@ -1,116 +1,188 @@
 {% extends "base.html" %}
 
+{% block title %}Folder | Enron Explorer{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
-    <div class="mb-3">
-        {% if folder.collaborator_id %}
-            <a href="{% url 'collaborator_detail' folder.collaborator_id %}" class="btn btn-outline-secondary btn-sm">
-                ← Retour au collaborateur
-            </a>
-        {% else %}
-            <a href="/collaborators/" class="btn btn-outline-secondary btn-sm">
-                ← Retour à la liste
-            </a>
-        {% endif %}
-    </div>
-
-    <h1 class="mb-4">Folder : {{ folder.folder_name }}</h1>
-
-    <div class="card mb-4">
-        <div class="card-header">
-            Informations du folder
-        </div>
-        <div class="card-body">
-            <p><strong>ID :</strong> {{ folder.id }}</p>
-            <p><strong>Folder name :</strong> {{ folder.folder_name }}</p>
-            <p><strong>Folder path :</strong> {{ folder.folder_path }}</p>
-            <p><strong>Folder type :</strong> {{ folder.folder_type|default:"-" }}</p>
-            <p><strong>Folder topic :</strong> {{ folder.folder_topic|default:"-" }}</p>
-            <p><strong>Mailbox :</strong> {{ folder.mailbox_key }}</p>
-            <p><strong>Source root path :</strong> {{ folder.source_root_path|default:"-" }}</p>
-            <p>
-                <strong>Collaborateur :</strong>
-                {% if folder.collaborator_id %}
-                    <a href="{% url 'collaborator_detail' folder.collaborator_id %}">
-                        {{ folder.display_name|default:folder.employee_key }}
-                    </a>
-                {% else %}
-                    -
-                {% endif %}
-            </p>
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="card-header">
-            Emails présents dans ce folder
-        </div>
-        <div class="card-body">
-            {% if messages %}
-                <div class="table-responsive">
-                    <table class="table table-striped table-bordered align-middle">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Occurrence ID</th>
-                                <th>Date</th>
-                                <th>Expéditeur</th>
-                                <th>Sujet</th>
-                                <th>Pièces jointes</th>
-                                <th>Réponse</th>
-                                <th>Forward</th>
-                                <th>Parse OK</th>
-                                <th>Validation</th>
-                                <th>Source file</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for msg in messages %}
-                            <tr>
-                                <td>{{ msg.occurrence_id }}</td>
-                                <td>{{ msg.sent_at|default:"-" }}</td>
-                                <td>{{ msg.sender_email|default:"-" }}</td>
-                                <td>
-                                    <a href="{% url 'message_detail' msg.occurrence_id %}">
-                                        {{ msg.subject_normalized|default:"(sans sujet)" }}
-                                    </a>
-                                </td>                                
-                                <td>
-                                    {% if msg.has_attachments %}
-                                        Oui ({{ msg.attachment_count }})
-                                    {% else %}
-                                        Non
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if msg.is_response %}Oui{% else %}Non{% endif %}
-                                </td>
-                                <td>
-                                    {% if msg.is_forward %}Oui{% else %}Non{% endif %}
-                                </td>
-                                <td>
-                                    {% if msg.parse_ok %}
-                                        <span class="badge bg-success">Oui</span>
-                                    {% else %}
-                                        <span class="badge bg-danger">Non</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if msg.validation_is_valid %}
-                                        <span class="badge bg-success">Valide</span>
-                                    {% else %}
-                                        <span class="badge bg-warning text-dark">À vérifier</span>
-                                    {% endif %}
-                                </td>
-                                <td>{{ msg.source_file }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+<div class="mb-4 d-flex justify-content-between align-items-start flex-wrap gap-3">
+    <div>
+        <div class="mb-3">
+            {% if folder.collaborator_id %}
+                <a href="{% url 'collaborator_detail' folder.collaborator_id %}" class="btn btn-outline-secondary btn-sm">
+                    ← Retour au collaborateur
+                </a>
             {% else %}
-                <p class="text-muted mb-0">Aucun email trouvé dans ce folder.</p>
+                <a href="{% url 'collaborator_list' %}" class="btn btn-outline-secondary btn-sm">
+                    ← Retour à la liste
+                </a>
             {% endif %}
         </div>
+
+        <h1 class="page-title mb-1">Folder : {{ folder.folder_name }}</h1>
+        <p class="page-subtitle mb-0">
+            Vue détaillée d’un folder, de son contexte de stockage et des messages associés.
+        </p>
+    </div>
+
+    <div class="soft-badge">
+        {{ messages|length }} message{{ messages|length|pluralize }}
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-8">
+        <div class="card panel-card h-100">
+            <div class="card-header">Informations du folder</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="text-muted small">ID</div>
+                        <div>{{ folder.id }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-muted small">Folder name</div>
+                        <div>{{ folder.folder_name|default:"-" }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-muted small">Mailbox</div>
+                        <div>{{ folder.mailbox_key|default:"-" }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="text-muted small">Folder path</div>
+                        <div>{{ folder.folder_path|default:"-" }}</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-muted small">Folder type</div>
+                        <div>{{ folder.folder_type|default:"-" }}</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-muted small">Folder topic</div>
+                        <div>{{ folder.folder_topic|default:"-" }}</div>
+                    </div>
+                    <div class="col-12">
+                        <div class="text-muted small">Source root path</div>
+                        <div>{{ folder.source_root_path|default:"-" }}</div>
+                    </div>
+                    <div class="col-12">
+                        <div class="text-muted small">Collaborateur associé</div>
+                        <div>
+                            {% if folder.collaborator_id %}
+                                <a href="{% url 'collaborator_detail' folder.collaborator_id %}" class="text-decoration-none fw-semibold">
+                                    {{ folder.display_name|default:folder.employee_key }}
+                                </a>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card panel-card h-100">
+            <div class="card-header">Résumé</div>
+            <div class="card-body d-flex flex-column gap-3">
+                <div>
+                    <div class="text-muted small">Nombre de messages</div>
+                    <div class="fs-3 fw-bold">{{ messages|length }}</div>
+                </div>
+                <div>
+                    <div class="text-muted small">Mailbox</div>
+                    <div class="fw-semibold">{{ folder.mailbox_key|default:"-" }}</div>
+                </div>
+                <div>
+                    <div class="text-muted small">Type</div>
+                    <div>{{ folder.folder_type|default:"-" }}</div>
+                </div>
+                <div class="text-muted small">
+                    Cette page permet d’explorer les messages présents dans un folder spécifique.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card panel-card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Emails présents dans ce folder</span>
+        <span class="soft-badge">Exploration des occurrences</span>
+    </div>
+    <div class="card-body">
+        {% if messages %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Occurrence ID</th>
+                            <th>Date</th>
+                            <th>Expéditeur</th>
+                            <th>Sujet</th>
+                            <th>Pièces jointes</th>
+                            <th>Réponse</th>
+                            <th>Forward</th>
+                            <th>Parse OK</th>
+                            <th>Validation</th>
+                            <th>Source file</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for msg in messages %}
+                        <tr>
+                            <td>{{ msg.occurrence_id }}</td>
+                            <td>{{ msg.sent_at|default:"-" }}</td>
+                            <td class="small">{{ msg.sender_email|default:"-" }}</td>
+                            <td>
+                                <a href="{% url 'message_detail' msg.occurrence_id %}" class="text-decoration-none fw-semibold">
+                                    {{ msg.subject_normalized|default:"(sans sujet)" }}
+                                </a>
+                            </td>
+                            <td>
+                                {% if msg.has_attachments %}
+                                    <span class="badge bg-warning-subtle text-warning-emphasis border">
+                                        Oui ({{ msg.attachment_count }})
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-light text-dark border">Non</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if msg.is_response %}
+                                    <span class="badge bg-info-subtle text-info-emphasis border">Oui</span>
+                                {% else %}
+                                    <span class="badge bg-light text-dark border">Non</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if msg.is_forward %}
+                                    <span class="badge bg-primary-subtle text-primary-emphasis border">Oui</span>
+                                {% else %}
+                                    <span class="badge bg-light text-dark border">Non</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if msg.parse_ok %}
+                                    <span class="badge bg-success-subtle text-success-emphasis border">Oui</span>
+                                {% else %}
+                                    <span class="badge bg-danger-subtle text-danger-emphasis border">Non</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if msg.validation_is_valid %}
+                                    <span class="badge bg-success-subtle text-success-emphasis border">Valide</span>
+                                {% else %}
+                                    <span class="badge bg-warning-subtle text-warning-emphasis border">À vérifier</span>
+                                {% endif %}
+                            </td>
+                            <td class="small text-muted">{{ msg.source_file }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-muted mb-0">Aucun email trouvé dans ce folder.</p>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

@@ -1,6 +1,6 @@
-{% extends "base.html" %}
+{% extends "base.html" %} # mecanisme d'heritage de template,on veut reutiliser navbar, boostrap, footer etc... de base.html et juste injecter le contenu de dashboard.html dans le block content de base.html
 
-{% block title %}Dashboard | Enron Explorer{% endblock %}
+{% block title %}Dashboard | Enron Explorer{% endblock %} # titre de la page, qui sera injecté dans la balise <title> du template de base
 
 {% block content %}
 <div class="hero-box mb-4">
@@ -13,7 +13,7 @@
 
 <div class="row g-4">
     <div class="col-md-6 col-xl-2">
-        <div class="card kpi-card h-100">
+        <div class="card kpi-card h-100"> # h-100 pour que les cartes aient toutes la même hauteur
             <div class="card-body">
                 <div class="kpi-label">Messages</div>
                 <div class="kpi-value">{{ summary.total_messages }}</div>
@@ -67,7 +67,7 @@
             </div>
             <div class="card-body">
                 <div class="chart-wrap">
-                    <canvas id="mailsPerMonthChart"></canvas>
+                    <canvas id="mailsPerMonthChart"></canvas> # chart.js utilise une balise canvas pour dessiner les graphiques, on lui donne un id pour pouvoir le cibler dans le script JS
                 </div>
             </div>
         </div>
@@ -150,16 +150,20 @@
 </div>
 {% endblock %}
 
+# pour creer les graphiques du dashboard, on utilise Chart.js, une librairie JS de visualisation de données. On inclut le script de Chart.js dans le template de base (base.html) pour qu'il soit disponible sur toutes les pages. Ensuite, dans le block extra_js de dashboard.html, on écrit un script qui va créer les graphiques en utilisant les données injectées par le backend.
+# on injecte les données du backend dans des variables JS, le filtre |safe permet de dire à Django que ces données sont déjà au format JSON et qu'il ne doit pas les échapper
+
 {% block extra_js %}
 <script>
-    const mailsPerMonthLabels = {{ mails_per_month_labels_json|safe }};
+    const mailsPerMonthLabels = {{ mails_per_month_labels_json|safe }}; 
     const mailsPerMonthValues = {{ mails_per_month_values_json|safe }};
     const topSendersLabels = {{ top_senders_labels_json|safe }};
     const topSendersValues = {{ top_senders_values_json|safe }};
 
+
     const mailsCtx = document.getElementById('mailsPerMonthChart');
     if (mailsCtx) {
-        new Chart(mailsCtx, {
+        new Chart(mailsCtx, { 
             type: 'line',
             data: {
                 labels: mailsPerMonthLabels,
