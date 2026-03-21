@@ -152,11 +152,13 @@ def collaborator_detail(request, collaborator_id):
             })
 
     mailboxes = list(mailboxes_map.values())
+    total_folders = sum(len(mailbox["folders"]) for mailbox in mailboxes)
 
     return render(request, "collaborators/detail.html", {
         "collaborator": collaborator,
         "emails": emails,
         "mailboxes": mailboxes,
+        "total_folders": total_folders,
     })
 
 
@@ -559,8 +561,12 @@ def message_thread(request, message_id):
         "thread_messages": thread_messages,
     })
 
+
+
 from django.shortcuts import render
 from django.db import connection
+from django.http import Http404
+import json
 
 
 def dashboard(request):
@@ -593,9 +599,9 @@ def dashboard(request):
     """
 
     message_with_response_id_sql = """
-    SELECT COUNT(*) AS message_with_response_count
-    FROM enron_message
-    WHERE response_to_message_id IS NOT NULL
+        SELECT COUNT(*) AS message_with_response_count
+        FROM enron_message
+        WHERE response_to_message_id IS NOT NULL
     """
 
     with connection.cursor() as cursor:
@@ -620,9 +626,31 @@ def dashboard(request):
         cursor.execute(message_with_response_id_sql)
         message_with_response_count = cursor.fetchone()[0]
 
+    mails_per_month_labels = [
+        row["month"].strftime("%Y-%m") if row["month"] else ""
+        for row in mails_per_month
+    ]
+    mails_per_month_values = [
+        row["message_count"]
+        for row in mails_per_month
+    ]
+
+    top_senders_labels = [
+        row["sender_email"]
+        for row in top_senders
+    ]
+    top_senders_values = [
+        row["message_count"]
+        for row in top_senders
+    ]
+
     return render(request, "dashboard.html", {
         "summary": summary,
         "mails_per_month": mails_per_month,
         "top_senders": top_senders,
-        "message_with_response": message_with_response_count
+        "message_with_response": message_with_response_count,
+        "mails_per_month_labels_json": json.dumps(mails_per_month_labels),
+        "mails_per_month_values_json": json.dumps(mails_per_month_values),
+        "top_senders_labels_json": json.dumps(top_senders_labels),
+        "top_senders_values_json": json.dumps(top_senders_values),
     })

@@ -1,72 +1,110 @@
 {% extends "base.html" %}
 
+{% block title %}Collaborateurs | Enron Explorer{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
-    <h1 class="mb-4">Liste des collaborateurs</h1>
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+    <div>
+        <h1 class="page-title mb-1">Collaborateurs</h1>
+        <p class="page-subtitle mb-0">
+            Exploration des personnes identifiées dans le corpus Enron et des adresses email associées.
+        </p>
+    </div>
+    <div class="soft-badge">
+        {{ collaborators|length }} résultat{{ collaborators|length|pluralize }}
+    </div>
+</div>
 
-    <form method="get" class="row g-2 mb-4">
-        <div class="col-md-6">
-            <input
-                type="text"
-                name="q"
-                value="{{ q|default:'' }}"
-                class="form-control"
-                placeholder="Rechercher par nom, clé employé ou email"
-            >
-        </div>
-        <div class="col-auto">
-            <button type="submit" class="btn btn-primary">Rechercher</button>
-        </div>
-    </form>
+<div class="card panel-card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-lg-8">
+                <label for="search-q" class="form-label fw-semibold">Recherche</label>
+                <input
+                    id="search-q"
+                    type="text"
+                    name="q"
+                    value="{{ q|default:'' }}"
+                    class="form-control"
+                    placeholder="Nom, employee key ou adresse email"
+                >
+            </div>
+            <div class="col-lg-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    Rechercher
+                </button>
+                <a href="{% url 'collaborator_list' %}" class="btn btn-outline-secondary">
+                    Réinitialiser
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
 
-    <div class="table-responsive">
-        <table class="table table-bordered table-striped align-middle">
-            <thead class="table-light">
-                <tr>
-                    <th>ID</th>
-                    <th>Employee key</th>
-                    <th>Nom affiché</th>
-                    <th>Prénom</th>
-                    <th>Nom</th>
-                    <th>Poste</th>
-                    <th>Employé Enron</th>
-                    <th>Nb emails</th>
-                    <th>Emails associés</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for row in collaborators %}
-                <tr>
-                    <td>{{ row.id }}</td>
-                   <td>{{ row.employee_key }}</td>
-                    <td>
-                        <a href="{% url 'collaborator_detail' row.id %}">
-                            {{ row.display_name|default:row.employee_key }}
-                        </a>
-                    </td>
-                    <td>{{ row.display_name|default:"-" }}</td>
-                    <td>{{ row.first_name|default:"-" }}</td>
-                    <td>{{ row.last_name|default:"-" }}</td>
-                    <td>{{ row.position_title|default:"-" }}</td>
-                    <td>
-                        {% if row.is_enron_employee %}
-                            <span class="badge bg-success">Oui</span>
-                        {% else %}
-                            <span class="badge bg-secondary">Non</span>
-                        {% endif %}
-                    </td>
-                    <td>{{ row.email_count }}</td>
-                    <td>{{ row.emails|default:"-" }}</td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="9" class="text-center text-muted">
-                        Aucun collaborateur trouvé.
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+<div class="card panel-card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Liste des collaborateurs</span>
+        {% if q %}
+            <span class="soft-badge">Filtre actif : "{{ q }}"</span>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        {% if collaborators %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Collaborateur</th>
+                            <th>Employee key</th>
+                            <th>Prénom</th>
+                            <th>Nom</th>
+                            <th>Poste</th>
+                            <th>Statut</th>
+                            <th>Nb emails</th>
+                            <th>Emails associés</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in collaborators %}
+                        <tr>
+                            <td>{{ row.id }}</td>
+                            <td>
+                                <a href="{% url 'collaborator_detail' row.id %}" class="fw-semibold text-decoration-none">
+                                    {{ row.display_name|default:row.employee_key }}
+                                </a>
+                            </td>
+                            <td>
+                                <code>{{ row.employee_key }}</code>
+                            </td>
+                            <td>{{ row.first_name|default:"-" }}</td>
+                            <td>{{ row.last_name|default:"-" }}</td>
+                            <td>{{ row.position_title|default:"-" }}</td>
+                            <td>
+                                {% if row.is_enron_employee %}
+                                    <span class="badge bg-success-subtle text-success-emphasis border">Employé Enron</span>
+                                {% else %}
+                                    <span class="badge bg-secondary-subtle text-secondary-emphasis border">Externe / inconnu</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge rounded-pill text-bg-light border">
+                                    {{ row.email_count }}
+                                </span>
+                            </td>
+                            <td class="small text-muted">
+                                {{ row.emails|default:"-" }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="py-4 text-center text-muted">
+                Aucun collaborateur trouvé.
+            </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

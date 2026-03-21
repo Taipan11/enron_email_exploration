@@ -1,180 +1,305 @@
 {% extends "base.html" %}
 
+{% block title %}Message | Enron Explorer{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
-    <div class="mb-3">
-        <a href="{% url 'folder_detail' occurrence.folder_id %}" class="btn btn-outline-secondary btn-sm">
+<div class="mb-4 d-flex justify-content-between align-items-start flex-wrap gap-3">
+    <div>
+        <a href="{% url 'folder_detail' occurrence.folder_id %}" class="btn btn-outline-secondary btn-sm mb-3">
             ← Retour au folder
         </a>
+        <h1 class="page-title mb-1">
+            {{ occurrence.subject_normalized|default:"(sans sujet)" }}
+        </h1>
+        <p class="page-subtitle mb-0">
+            Détail complet d’une occurrence de message : contexte, métadonnées, destinataires, pièces jointes et contenu.
+        </p>
     </div>
 
-    <h1 class="mb-4">
-        {{ occurrence.subject_normalized|default:"(sans sujet)" }}
-    </h1>
-    <div class="mb-3">
-    <a href="{% url 'message_thread' occurrence.message_pk %}" class="btn btn-primary btn-sm">
-        Voir la conversation complète
-    </a>
+    <div class="d-flex gap-2 flex-wrap">
+        <span class="soft-badge">Occurrence #{{ occurrence.occurrence_id }}</span>
+        <a href="{% url 'message_thread' occurrence.message_pk %}" class="btn btn-primary btn-sm">
+            Voir la conversation complète
+        </a>
+    </div>
 </div>
-    <div class="card mb-4">
-        <div class="card-header">Contexte de l'occurrence</div>
-        <div class="card-body">
-            <p><strong>Occurrence ID :</strong> {{ occurrence.occurrence_id }}</p>
-            <p><strong>Source file :</strong> {{ occurrence.source_file }}</p>
-            <p>
-                <strong>Validation :</strong>
-                {% if occurrence.validation_is_valid %}
-                    <span class="badge bg-success">Valide</span>
-                {% else %}
-                    <span class="badge bg-warning text-dark">À vérifier</span>
-                {% endif %}
-            </p>
-            <p><strong>Mailbox :</strong> {{ occurrence.mailbox_key }}</p>
-            <p><strong>Folder :</strong> {{ occurrence.folder_name }} ({{ occurrence.folder_path }})</p>
-            <p><strong>Folder type :</strong> {{ occurrence.folder_type|default:"-" }}</p>
-            <p><strong>Folder topic :</strong> {{ occurrence.folder_topic|default:"-" }}</p>
-            <p>
-                <strong>Collaborateur :</strong>
-                {% if occurrence.collaborator_id %}
-                    <a href="{% url 'collaborator_detail' occurrence.collaborator_id %}">
-                        {{ occurrence.collaborator_display_name|default:occurrence.employee_key }}
-                    </a>
-                {% else %}
-                    -
-                {% endif %}
-            </p>
-            
-        </div>
-    </div>
 
-    <div class="card mb-4">
-        <div class="card-header">Métadonnées du message</div>
-        <div class="card-body">
-            <p><strong>Message PK :</strong> {{ occurrence.message_pk }}</p>
-            <p><strong>Message-ID :</strong> {{ occurrence.message_id }}</p>
-            <p><strong>Date d'envoi :</strong> {{ occurrence.sent_at|default:"-" }}</p>
-            <p><strong>Expéditeur :</strong> {{ occurrence.sender_email|default:"-" }}</p>
-            <p><strong>MIME type :</strong> {{ occurrence.mime_type|default:"-" }}</p>
-            <p><strong>Content-Type header :</strong> {{ occurrence.content_type_header|default:"-" }}</p>
-            <p><strong>In-Reply-To :</strong> {{ occurrence.in_reply_to|default:"-" }}</p>
-            <p><strong>Response to :</strong> {{ occurrence.response_to_message_id|default:"-" }}</p>
-            <p><strong>Thread root :</strong> {{ occurrence.thread_root_message_id|default:"-" }}</p>
-        </div>
-    </div>
-
-    <div class="card mb-4">
-        <div class="card-header">Indicateurs</div>
-        <div class="card-body">
-            <p><strong>Pièces jointes :</strong> {% if occurrence.has_attachments %}Oui ({{ occurrence.attachment_count }}){% else %}Non{% endif %}</p>
-            <p><strong>Parse OK :</strong> {% if occurrence.parse_ok %}Oui{% else %}Non{% endif %}</p>
-            <p><strong>Réponse :</strong> {% if occurrence.is_response %}Oui{% else %}Non{% endif %}</p>
-            <p><strong>Forward :</strong> {% if occurrence.is_forward %}Oui{% else %}Non{% endif %}</p>
-            <p><strong>References depth :</strong> {{ occurrence.references_depth }}</p>
-            <p><strong>Quoted line count :</strong> {{ occurrence.quoted_line_count }}</p>
-        </div>
-    </div>
-
-    <div class="card mb-4">
-        <div class="card-header">Destinataires</div>
-        <div class="card-body">
-            <p><strong>To :</strong></p>
-            {% if recipients_by_type.to %}
-                <ul>
-                    {% for r in recipients_by_type.to %}
-                        <li>{{ r.email }}{% if r.display_name %} — {{ r.display_name }}{% endif %}</li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p class="text-muted">Aucun destinataire To.</p>
-            {% endif %}
-
-            <p><strong>Cc :</strong></p>
-            {% if recipients_by_type.cc %}
-                <ul>
-                    {% for r in recipients_by_type.cc %}
-                        <li>{{ r.email }}{% if r.display_name %} — {{ r.display_name }}{% endif %}</li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p class="text-muted">Aucun destinataire Cc.</p>
-            {% endif %}
-
-            <p><strong>Bcc :</strong></p>
-            {% if recipients_by_type.bcc %}
-                <ul>
-                    {% for r in recipients_by_type.bcc %}
-                        <li>{{ r.email }}{% if r.display_name %} — {{ r.display_name }}{% endif %}</li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p class="text-muted">Aucun destinataire Bcc.</p>
-            {% endif %}
-        </div>
-    </div>
-
-    <div class="card mb-4">
-        <div class="card-header">Pièces jointes</div>
-        <div class="card-body">
-            {% if attachments %}
-                <div class="table-responsive">
-                    <table class="table table-sm table-striped">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Nom fichier</th>
-                                <th>Type MIME</th>
-                                <th>Taille</th>
-                                <th>SHA256</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for a in attachments %}
-                            <tr>
-                                <td>{{ a.id }}</td>
-                                <td>{{ a.filename|default:"-" }}</td>
-                                <td>{{ a.mime_type|default:"-" }}</td>
-                                <td>{{ a.size_bytes|default:"-" }}</td>
-                                <td>{{ a.sha256|default:"-" }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+<div class="row g-4 mb-4">
+    <div class="col-lg-8">
+        <div class="card panel-card h-100">
+            <div class="card-header">Contexte de l’occurrence</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="text-muted small">Source file</div>
+                        <div>{{ occurrence.source_file|default:"-" }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="text-muted small">Validation</div>
+                        <div>
+                            {% if occurrence.validation_is_valid %}
+                                <span class="badge bg-success-subtle text-success-emphasis border">Valide</span>
+                            {% else %}
+                                <span class="badge bg-warning-subtle text-warning-emphasis border">À vérifier</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-muted small">Mailbox</div>
+                        <div>{{ occurrence.mailbox_key|default:"-" }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-muted small">Folder</div>
+                        <div>{{ occurrence.folder_name|default:"-" }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-muted small">Folder path</div>
+                        <div>{{ occurrence.folder_path|default:"-" }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="text-muted small">Folder type</div>
+                        <div>{{ occurrence.folder_type|default:"-" }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="text-muted small">Folder topic</div>
+                        <div>{{ occurrence.folder_topic|default:"-" }}</div>
+                    </div>
+                    <div class="col-12">
+                        <div class="text-muted small">Collaborateur associé</div>
+                        <div>
+                            {% if occurrence.collaborator_id %}
+                                <a href="{% url 'collaborator_detail' occurrence.collaborator_id %}" class="text-decoration-none fw-semibold">
+                                    {{ occurrence.collaborator_display_name|default:occurrence.employee_key }}
+                                </a>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
-            {% else %}
-                <p class="text-muted mb-0">Aucune pièce jointe.</p>
-            {% endif %}
+            </div>
         </div>
     </div>
 
-    <div class="card mb-4">
-        <div class="card-header">Références</div>
-        <div class="card-body">
-            {% if references %}
-                <ul class="mb-0">
-                    {% for ref in references %}
-                        <li>{{ ref.referenced_message_id }}</li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p class="text-muted mb-0">Aucune référence.</p>
-            {% endif %}
+    <div class="col-lg-4">
+        <div class="card panel-card h-100">
+            <div class="card-header">Indicateurs</div>
+            <div class="card-body d-flex flex-column gap-3">
+                <div>
+                    <div class="text-muted small">Pièces jointes</div>
+                    <div class="fs-4 fw-bold">
+                        {% if occurrence.has_attachments %}
+                            Oui ({{ occurrence.attachment_count }})
+                        {% else %}
+                            Non
+                        {% endif %}
+                    </div>
+                </div>
+                <div>
+                    <div class="text-muted small">Parse OK</div>
+                    <div>
+                        {% if occurrence.parse_ok %}
+                            <span class="badge bg-success-subtle text-success-emphasis border">Oui</span>
+                        {% else %}
+                            <span class="badge bg-danger-subtle text-danger-emphasis border">Non</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div>
+                    <div class="text-muted small">Réponse</div>
+                    <div>
+                        {% if occurrence.is_response %}
+                            <span class="badge bg-info-subtle text-info-emphasis border">Oui</span>
+                        {% else %}
+                            <span class="badge bg-light text-dark border">Non</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div>
+                    <div class="text-muted small">Forward</div>
+                    <div>
+                        {% if occurrence.is_forward %}
+                            <span class="badge bg-primary-subtle text-primary-emphasis border">Oui</span>
+                        {% else %}
+                            <span class="badge bg-light text-dark border">Non</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div>
+                    <div class="text-muted small">References depth</div>
+                    <div class="fs-5 fw-semibold">{{ occurrence.references_depth }}</div>
+                </div>
+                <div>
+                    <div class="text-muted small">Quoted line count</div>
+                    <div class="fs-5 fw-semibold">{{ occurrence.quoted_line_count }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card panel-card mb-4">
+    <div class="card-header">Métadonnées du message</div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="text-muted small">Message PK</div>
+                <div>{{ occurrence.message_pk }}</div>
+            </div>
+            <div class="col-md-6">
+                <div class="text-muted small">Message-ID</div>
+                <div><code>{{ occurrence.message_id|default:"-" }}</code></div>
+            </div>
+            <div class="col-md-6">
+                <div class="text-muted small">Date d’envoi</div>
+                <div>{{ occurrence.sent_at|default:"-" }}</div>
+            </div>
+            <div class="col-md-6">
+                <div class="text-muted small">Expéditeur</div>
+                <div>{{ occurrence.sender_email|default:"-" }}</div>
+            </div>
+            <div class="col-md-6">
+                <div class="text-muted small">MIME type</div>
+                <div>{{ occurrence.mime_type|default:"-" }}</div>
+            </div>
+            <div class="col-md-6">
+                <div class="text-muted small">Content-Type header</div>
+                <div>{{ occurrence.content_type_header|default:"-" }}</div>
+            </div>
+            <div class="col-md-4">
+                <div class="text-muted small">In-Reply-To</div>
+                <div><code>{{ occurrence.in_reply_to|default:"-" }}</code></div>
+            </div>
+            <div class="col-md-4">
+                <div class="text-muted small">Response to</div>
+                <div><code>{{ occurrence.response_to_message_id|default:"-" }}</code></div>
+            </div>
+            <div class="col-md-4">
+                <div class="text-muted small">Thread root</div>
+                <div><code>{{ occurrence.thread_root_message_id|default:"-" }}</code></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-6">
+        <div class="card panel-card h-100">
+            <div class="card-header">Destinataires</div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="text-muted small mb-2">To</div>
+                    {% if recipients_by_type.to %}
+                        <ul class="mb-0">
+                            {% for r in recipients_by_type.to %}
+                                <li>{{ r.email }}{% if r.display_name %} — {{ r.display_name }}{% endif %}</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted mb-0">Aucun destinataire To.</p>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    <div class="text-muted small mb-2">Cc</div>
+                    {% if recipients_by_type.cc %}
+                        <ul class="mb-0">
+                            {% for r in recipients_by_type.cc %}
+                                <li>{{ r.email }}{% if r.display_name %} — {{ r.display_name }}{% endif %}</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted mb-0">Aucun destinataire Cc.</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <div class="text-muted small mb-2">Bcc</div>
+                    {% if recipients_by_type.bcc %}
+                        <ul class="mb-0">
+                            {% for r in recipients_by_type.bcc %}
+                                <li>{{ r.email }}{% if r.display_name %} — {{ r.display_name }}{% endif %}</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted mb-0">Aucun destinataire Bcc.</p>
+                    {% endif %}
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="card mb-4">
-        <div class="card-header">Corps du message</div>
-        <div class="card-body">
-            <p><strong>Body clean :</strong></p>
-            <pre class="bg-light p-3 rounded" style="white-space: pre-wrap;">{{ occurrence.body_clean|default:"-" }}</pre>
-
-            <p class="mt-3"><strong>Signature :</strong></p>
-            <pre class="bg-light p-3 rounded" style="white-space: pre-wrap;">{{ occurrence.signature|default:"-" }}</pre>
-
-            {% if occurrence.parse_error %}
-                <p class="mt-3"><strong>Parse error :</strong></p>
-                <pre class="bg-light p-3 rounded text-danger" style="white-space: pre-wrap;">{{ occurrence.parse_error }}</pre>
-            {% endif %}
+    <div class="col-lg-6">
+        <div class="card panel-card h-100">
+            <div class="card-header">Références</div>
+            <div class="card-body">
+                {% if references %}
+                    <ul class="mb-0">
+                        {% for ref in references %}
+                            <li><code>{{ ref.referenced_message_id }}</code></li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted mb-0">Aucune référence.</p>
+                {% endif %}
+            </div>
         </div>
+    </div>
+</div>
+
+<div class="card panel-card mb-4">
+    <div class="card-header">Pièces jointes</div>
+    <div class="card-body">
+        {% if attachments %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nom fichier</th>
+                            <th>Type MIME</th>
+                            <th>Taille</th>
+                            <th>SHA256</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in attachments %}
+                        <tr>
+                            <td>{{ a.id }}</td>
+                            <td>{{ a.filename|default:"-" }}</td>
+                            <td>{{ a.mime_type|default:"-" }}</td>
+                            <td>{{ a.size_bytes|default:"-" }}</td>
+                            <td class="small text-muted">{{ a.sha256|default:"-" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-muted mb-0">Aucune pièce jointe.</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card panel-card mb-4">
+    <div class="card-header">Corps du message</div>
+    <div class="card-body">
+        <div class="mb-4">
+            <div class="text-muted small mb-2">Body clean</div>
+            <pre class="bg-light p-3 rounded border" style="white-space: pre-wrap;">{{ occurrence.body_clean|default:"-" }}</pre>
+        </div>
+
+        <div class="mb-4">
+            <div class="text-muted small mb-2">Signature</div>
+            <pre class="bg-light p-3 rounded border" style="white-space: pre-wrap;">{{ occurrence.signature|default:"-" }}</pre>
+        </div>
+
+        {% if occurrence.parse_error %}
+            <div>
+                <div class="text-muted small mb-2">Parse error</div>
+                <pre class="bg-light p-3 rounded border text-danger" style="white-space: pre-wrap;">{{ occurrence.parse_error }}</pre>
+            </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}
