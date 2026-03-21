@@ -38,13 +38,12 @@
                 {% for row in collaborators %}
                 <tr>
                     <td>{{ row.id }}</td>
-                   <td>{{ row.employee_key }}</td>
+                    <td>{{ row.employee_key }}</td>
                     <td>
                         <a href="{% url 'collaborator_detail' row.id %}">
                             {{ row.display_name|default:row.employee_key }}
                         </a>
                     </td>
-                    <td>{{ row.display_name|default:"-" }}</td>
                     <td>{{ row.first_name|default:"-" }}</td>
                     <td>{{ row.last_name|default:"-" }}</td>
                     <td>{{ row.position_title|default:"-" }}</td>

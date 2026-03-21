@@ -96,6 +96,6 @@ docker compose exec web python manage.py makemigrations
 docker compose exec web python manage.py migrate
 docker compose exec web python manage.py download_data
 docker compose exec web python manage.py import_enron data/enron/maildir
-docker compose exec web python manage.py infer_collaborators data/enron/maildir
+docker compose exec web python manage.py  infer_collaborators data/enron/maildir
 docker compose exec web python manage.py infer_alias data/enron/maildir
 ```

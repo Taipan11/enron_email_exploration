@@ -70,9 +70,13 @@
                                 <td>{{ msg.sent_at|default:"-" }}</td>
                                 <td>{{ msg.sender_email|default:"-" }}</td>
                                 <td>
-                                    <a href="{% url 'message_detail' msg.occurrence_id %}">
+                                    {% if msg.message_pk %}
+                                        <a href="{% url 'message_detail' msg.message_pk %}">
+                                            {{ msg.subject_normalized|default:"(sans sujet)" }}
+                                        </a>
+                                    {% else %}
                                         {{ msg.subject_normalized|default:"(sans sujet)" }}
-                                    </a>
+                                    {% endif %}
                                 </td>                                
                                 <td>
                                     {% if msg.has_attachments %}

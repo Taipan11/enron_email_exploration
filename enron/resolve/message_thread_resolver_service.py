@@ -49,7 +49,7 @@ class MessageThreadResolverService:
     """
 
     HEURISTIC_MAX_LOOKBACK_DAYS = 30
-    HEURISTIC_MIN_SCORE = 0.70
+    HEURISTIC_MIN_SCORE = 0.45
 
     def rebuild_all(self, batch_size: int = 1000) -> ThreadResolutionStats:
         stats = ThreadResolutionStats()

@@ -26,12 +26,12 @@ class EmailPersistenceStats:
     sender_updated: int = 0
     sender_found_unchanged: int = 0
     messages_created: int = 0
-    messages_updated: int = 0
-    recipients_replaced: int = 0
-    references_replaced: int = 0
-    attachments_replaced: int = 0
+    messages_found: int = 0
     occurrences_created: int = 0
     occurrences_updated: int = 0
+    recipients_created: int = 0
+    references_created: int = 0
+    attachments_created: int = 0
 
 
 @dataclass(slots=True)
@@ -46,6 +46,13 @@ class PersistenceResult:
 class EmailPersistenceService:
     """
     Persistance relationnelle d'un ParsedEmailPayload.
+
+    Règle métier :
+    - Message = entité canonique dédupliquée par canonical_hash
+    - MessageOccurrence = apparition d'un même message dans un fichier source
+    - une occurrence n'est créée que pour un message strictement identique
+      (le canonical_hash doit donc déjà inclure le contenu canonique complet :
+      sender, date, sujet, body, recipients, references, attachments, etc.)
     """
 
     @transaction.atomic
@@ -61,17 +68,21 @@ class EmailPersistenceService:
         folder = self._get_or_create_folder(parsed_email, mailbox, stats)
         sender = self._get_or_create_sender_email_address(parsed_email, stats)
 
-        message, message_created = self._save_message(parsed_email, sender)
+        message, message_created = self._get_or_create_message(
+            parsed_email=parsed_email,
+            sender=sender,
+        )
+
         if message_created:
             result.created += 1
             stats.messages_created += 1
+
+            stats.recipients_created = self._create_recipients(message, parsed_email)
+            stats.references_created = self._create_references(message, parsed_email)
+            stats.attachments_created = self._create_attachments(message, parsed_email)
         else:
             result.updated += 1
-            stats.messages_updated += 1
-
-        stats.recipients_replaced = self._replace_recipients(message, parsed_email)
-        stats.references_replaced = self._replace_references(message, parsed_email)
-        stats.attachments_replaced = self._replace_attachments(message, parsed_email)
+            stats.messages_found += 1
 
         occurrence, occurrence_created = self._save_occurrence(
             parsed_email=parsed_email,
@@ -80,6 +91,7 @@ class EmailPersistenceService:
             mailbox=mailbox,
             validation_result=validation_result,
         )
+
         if occurrence_created:
             result.created += 1
             stats.occurrences_created += 1
@@ -135,21 +147,27 @@ class EmailPersistenceService:
             return folder
 
         has_changes = False
+        update_fields: list[str] = []
 
-        if folder.folder_name != (folder_payload.folder_name or folder.folder_name):
-            folder.folder_name = folder_payload.folder_name or folder.folder_name
+        new_folder_name = folder_payload.folder_name or folder.folder_name
+        if folder.folder_name != new_folder_name:
+            folder.folder_name = new_folder_name
+            update_fields.append("folder_name")
             has_changes = True
 
         if folder.folder_type != folder_payload.folder_type:
             folder.folder_type = folder_payload.folder_type
+            update_fields.append("folder_type")
             has_changes = True
 
         if folder.folder_topic != folder_payload.folder_topic:
             folder.folder_topic = folder_payload.folder_topic
+            update_fields.append("folder_topic")
             has_changes = True
 
         if has_changes:
-            folder.save(update_fields=["folder_name", "folder_type", "folder_topic", "updated_at"])
+            update_fields.append("updated_at")
+            folder.save(update_fields=update_fields)
             stats.folders_updated += 1
         else:
             stats.folders_found_unchanged += 1
@@ -179,71 +197,84 @@ class EmailPersistenceService:
             return email_address
 
         has_changes = False
+        update_fields: list[str] = []
 
         if not email_address.local_part and sender_payload.local_part:
             email_address.local_part = sender_payload.local_part
+            update_fields.append("local_part")
             has_changes = True
 
         if not email_address.domain and sender_payload.domain:
             email_address.domain = sender_payload.domain
+            update_fields.append("domain")
             has_changes = True
 
         if not email_address.display_name and sender_payload.display_name:
             email_address.display_name = sender_payload.display_name
+            update_fields.append("display_name")
             has_changes = True
 
         if has_changes:
-            email_address.save(update_fields=["local_part", "domain", "display_name", "updated_at"])
+            update_fields.append("updated_at")
+            email_address.save(update_fields=update_fields)
             stats.sender_updated += 1
         else:
             stats.sender_found_unchanged += 1
 
         return email_address
 
-    def _save_message(
+    def _get_or_create_message(
         self,
+        *,
         parsed_email: ParsedEmailPayload,
         sender: EmailAddress | None,
     ) -> tuple[Message, bool]:
         payload = parsed_email.message
 
-        defaults = {
-            "sender": sender,
-            "sender_email": payload.sender.email if payload.sender else None,
-            "sent_at": payload.sent_at,
-            "in_reply_to": payload.in_reply_to,
-            "subject_normalized": payload.subject_normalized,
-            "body_clean": payload.body_clean,
-            "signature": payload.signature,
-            "mime_type": payload.mime_type,
-            "content_type_header": payload.content_type_header,
-            "has_attachments": payload.has_attachments,
-            "attachment_count": payload.attachment_count,
-            "parse_ok": payload.parse_ok,
-            "parse_error": payload.parse_error,
-            "is_response": payload.is_response,
-            "is_forward": payload.is_forward,
-            "response_to_message_id": payload.response_to_message_id,
-            "response_to_message_id_source": payload.response_to_message_id_source,
-            "thread_root_message_id": payload.thread_root_message_id,
-            "references_depth": payload.references_depth,
-            "quoted_line_count": payload.quoted_line_count,
-        }
+        if not payload.canonical_hash:
+            raise ValueError("parsed_email.message.canonical_hash is required")
 
-        message, created = Message.objects.update_or_create(
+        message = Message.objects.filter(
+            canonical_hash=payload.canonical_hash,
+        ).first()
+
+        if message is not None:
+            return message, False
+
+        message = Message.objects.create(
+            canonical_hash=payload.canonical_hash,
             message_id=payload.message_id,
-            defaults=defaults,
+            sender=sender,
+            sender_email=payload.sender.email if payload.sender else None,
+            sent_at=payload.sent_at,
+            in_reply_to=payload.in_reply_to,
+            subject_normalized=payload.subject_normalized,
+            body_clean=payload.body_clean,
+            body_html_clean=payload.body_html_clean,
+            signature=payload.signature,
+            mime_type=payload.mime_type,
+            content_type_header=payload.content_type_header,
+            has_attachments=payload.has_attachments,
+            attachment_count=payload.attachment_count,
+            parse_ok=payload.parse_ok,
+            parse_error=payload.parse_error,
+            is_response=payload.is_response,
+            is_forward=payload.is_forward,
+            response_to_message_id=payload.response_to_message_id,
+            response_to_message_id_source=payload.response_to_message_id_source,
+            thread_root_message_id=payload.thread_root_message_id,
+            references_depth=payload.references_depth,
+            quoted_line_count=payload.quoted_line_count,
         )
-        return message, created
+        return message, True
 
-    def _replace_recipients(
+    def _create_recipients(
         self,
         message: Message,
         parsed_email: ParsedEmailPayload,
     ) -> int:
-        MessageRecipient.objects.filter(message=message).delete()
-
         created_count = 0
+
         for recipient_payload in parsed_email.message.recipients:
             if not recipient_payload.email_address or not recipient_payload.email_address.email:
                 continue
@@ -262,14 +293,13 @@ class EmailPersistenceService:
 
         return created_count
 
-    def _replace_references(
+    def _create_references(
         self,
         message: Message,
         parsed_email: ParsedEmailPayload,
     ) -> int:
-        MessageReference.objects.filter(message=message).delete()
-
         created_count = 0
+
         for reference_payload in parsed_email.message.references:
             if not reference_payload.referenced_message_id:
                 continue
@@ -282,14 +312,13 @@ class EmailPersistenceService:
 
         return created_count
 
-    def _replace_attachments(
+    def _create_attachments(
         self,
         message: Message,
         parsed_email: ParsedEmailPayload,
     ) -> int:
-        Attachment.objects.filter(message=message).delete()
-
         created_count = 0
+
         for attachment_payload in parsed_email.message.attachments:
             Attachment.objects.create(
                 message=message,
@@ -340,22 +369,30 @@ class EmailPersistenceService:
             },
         )
 
+        if created:
+            return email_address
+
         has_changes = False
+        update_fields: list[str] = []
 
         if not email_address.local_part and payload.local_part:
             email_address.local_part = payload.local_part
+            update_fields.append("local_part")
             has_changes = True
 
         if not email_address.domain and payload.domain:
             email_address.domain = payload.domain
+            update_fields.append("domain")
             has_changes = True
 
         if not email_address.display_name and payload.display_name:
             email_address.display_name = payload.display_name
+            update_fields.append("display_name")
             has_changes = True
 
-        if has_changes and not created:
-            email_address.save(update_fields=["local_part", "domain", "display_name", "updated_at"])
+        if has_changes:
+            update_fields.append("updated_at")
+            email_address.save(update_fields=update_fields)
 
         return email_address
 
@@ -373,10 +410,10 @@ class EmailPersistenceService:
             "sender_updated": stats.sender_updated,
             "sender_found_unchanged": stats.sender_found_unchanged,
             "messages_created": stats.messages_created,
-            "messages_updated": stats.messages_updated,
-            "recipients_replaced": stats.recipients_replaced,
-            "references_replaced": stats.references_replaced,
-            "attachments_replaced": stats.attachments_replaced,
+            "messages_found": stats.messages_found,
             "occurrences_created": stats.occurrences_created,
             "occurrences_updated": stats.occurrences_updated,
+            "recipients_created": stats.recipients_created,
+            "references_created": stats.references_created,
+            "attachments_created": stats.attachments_created,
         }

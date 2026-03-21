@@ -1,112 +1,653 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container mt-4">
-    <h1 class="mb-4">Dashboard Global</h1>
+<div class="container-fluid px-0">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h1 class="mb-1">Dashboard Global</h1>
+            <p class="text-muted mb-0">Vue analytique des messages Enron</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'message_list' %}" class="btn btn-primary">
+                Rechercher des messages
+            </a>
+        </div>
+    </div>
 
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card text-center">
-                <div class="card-header">Messages</div>
+    <style>
+        .kpi-card {
+            border: 0;
+            border-radius: 1rem;
+            box-shadow: 0 0.25rem 1rem rgba(0, 0, 0, 0.06);
+        }
+
+        .kpi-label {
+            font-size: 0.85rem;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+        }
+
+        .kpi-value {
+            font-size: 2rem;
+            font-weight: 700;
+            line-height: 1.1;
+        }
+
+        .kpi-subvalue {
+            font-size: 0.95rem;
+            color: #6c757d;
+        }
+
+        .dashboard-card {
+            border: 0;
+            border-radius: 1rem;
+            box-shadow: 0 0.25rem 1rem rgba(0, 0, 0, 0.06);
+            height: 100%;
+        }
+
+        .dashboard-card .card-header {
+            background: #fff;
+            border-bottom: 1px solid rgba(0,0,0,.06);
+            font-weight: 600;
+            border-top-left-radius: 1rem;
+            border-top-right-radius: 1rem;
+        }
+
+        .chart-box {
+            width: 100%;
+            height: 360px;
+        }
+
+        .chart-box-sm {
+            width: 100%;
+            height: 300px;
+        }
+
+        .table-card table {
+            margin-bottom: 0;
+        }
+
+        .muted-empty {
+            color: #6c757d;
+            font-style: italic;
+        }
+    </style>
+
+    <div class="row g-4 mb-4">
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="card kpi-card h-100">
                 <div class="card-body">
-                    <h3>{{ summary.total_messages }}</h3>
+                    <div class="kpi-label mb-2">Messages</div>
+                    <div class="kpi-value">{{ summary.total_messages }}</div>
+                    <div class="kpi-subvalue mt-2">Base totale des emails</div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card text-center">
-                <div class="card-header">Collaborateurs</div>
+
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="card kpi-card h-100">
                 <div class="card-body">
-                    <h3>{{ summary.total_collaborators }}</h3>
+                    <div class="kpi-label mb-2">Collaborateurs</div>
+                    <div class="kpi-value">{{ summary.total_collaborators }}</div>
+                    <div class="kpi-subvalue mt-2">Employés / profils indexés</div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card text-center">
-                <div class="card-header">Mailboxes</div>
+
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="card kpi-card h-100">
                 <div class="card-body">
-                    <h3>{{ summary.total_mailboxes }}</h3>
+                    <div class="kpi-label mb-2">Mailboxes</div>
+                    <div class="kpi-value">{{ summary.total_mailboxes }}</div>
+                    <div class="kpi-subvalue mt-2">Boîtes aux lettres distinctes</div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card text-center">
-                <div class="card-header">Pièces jointes</div>
+
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="card kpi-card h-100">
                 <div class="card-body">
-                    <h3>{{ summary.total_attachments }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-center">
-                <div class="card-header">Message avec reponses</div>
-                <div class="card-body">
-                    <h3>{{ message_with_response }}</h3>
+                    <div class="kpi-label mb-2">Pièces jointes</div>
+                    <div class="kpi-value">{{ summary.total_attachments }}</div>
+                    <div class="kpi-subvalue mt-2">Fichiers attachés détectés</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="card mb-4">
-        <div class="card-header">
-            Volume de mails par mois
-        </div>
-        <div class="card-body">
-            {% if mails_per_month %}
-                <div class="table-responsive">
-                    <table class="table table-striped table-bordered">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Mois</th>
-                                <th>Nombre de mails</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for row in mails_per_month %}
-                            <tr>
-                                <td>{{ row.month|date:"Y-m" }}</td>
-                                <td>{{ row.message_count }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+    <div class="row g-4 mb-4">
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="card kpi-card h-100">
+                <div class="card-body">
+                    <div class="kpi-label mb-2">Messages avec réponse liée</div>
+                    <div class="kpi-value">{{ summary.message_with_response }}</div>
+                    <div class="kpi-subvalue mt-2">response_to_message_id renseigné</div>
                 </div>
-            {% else %}
-                <p class="text-muted mb-0">Aucune donnée disponible.</p>
-            {% endif %}
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="card kpi-card h-100">
+                <div class="card-body">
+                    <div class="kpi-label mb-2">Taux parse OK</div>
+                    <div class="kpi-value">{{ summary.parse_ok_rate }}%</div>
+                    <div class="kpi-subvalue mt-2">Qualité de parsing globale</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="card kpi-card h-100">
+                <div class="card-body">
+                    <div class="kpi-label mb-2">Avec pièces jointes</div>
+                    <div class="kpi-value">{{ summary.with_attachments_rate }}%</div>
+                    <div class="kpi-subvalue mt-2">Part des messages avec PJ</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="card kpi-card h-100">
+                <div class="card-body">
+                    <div class="kpi-label mb-2">Réponses / Forwards</div>
+                    <div class="kpi-value">{{ summary.response_rate }}% / {{ summary.forward_rate }}%</div>
+                    <div class="kpi-subvalue mt-2">Part des réponses et transferts</div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="card mb-4">
-        <div class="card-header">
-            Top 10 des expéditeurs les plus actifs
-        </div>
-        <div class="card-body">
-            {% if top_senders %}
-                <div class="table-responsive">
-                    <table class="table table-striped table-bordered">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Rang</th>
-                                <th>Expéditeur</th>
-                                <th>Nombre de mails</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for row in top_senders %}
-                            <tr>
-                                <td>{{ forloop.counter }}</td>
-                                <td>{{ row.sender_email }}</td>
-                                <td>{{ row.message_count }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+    <div class="row g-4 mb-4">
+        <div class="col-12 col-xl-8">
+            <div class="card dashboard-card">
+                <div class="card-header">Volume de messages par mois</div>
+                <div class="card-body">
+                    <div id="messagesPerMonthChart" class="chart-box"></div>
                 </div>
-            {% else %}
-                <p class="text-muted mb-0">Aucune donnée disponible.</p>
-            {% endif %}
+            </div>
+        </div>
+
+        <div class="col-12 col-xl-4">
+            <div class="card dashboard-card">
+                <div class="card-header">Messages avec / sans pièces jointes</div>
+                <div class="card-body">
+                    <div id="attachmentsDonutChart" class="chart-box"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-12 col-xl-6">
+            <div class="card dashboard-card">
+                <div class="card-header">Réponses / forwards / pièces jointes par mois</div>
+                <div class="card-body">
+                    <div id="responsesForwardsChart" class="chart-box"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-xl-6">
+            <div class="card dashboard-card">
+                <div class="card-header">Top 10 expéditeurs</div>
+                <div class="card-body">
+                    <div id="topSendersChart" class="chart-box"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-12 col-lg-4">
+            <div class="card dashboard-card">
+                <div class="card-header">Distribution horaire</div>
+                <div class="card-body">
+                    <div id="hourlyChart" class="chart-box-sm"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-4">
+            <div class="card dashboard-card">
+                <div class="card-header">Profondeur des threads</div>
+                <div class="card-body">
+                    <div id="depthChart" class="chart-box-sm"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-4">
+            <div class="card dashboard-card">
+                <div class="card-header">Lignes citées</div>
+                <div class="card-body">
+                    <div id="quotedChart" class="chart-box-sm"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-12 col-lg-4">
+            <div class="card dashboard-card">
+                <div class="card-header">Top domaines expéditeurs</div>
+                <div class="card-body">
+                    <div id="topDomainsChart" class="chart-box-sm"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-4">
+            <div class="card dashboard-card">
+                <div class="card-header">Top mailboxes</div>
+                <div class="card-body">
+                    <div id="topMailboxesChart" class="chart-box-sm"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-4">
+            <div class="card dashboard-card">
+                <div class="card-header">Top folders</div>
+                <div class="card-body">
+                    <div id="topFoldersChart" class="chart-box-sm"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-12 col-xl-5">
+            <div class="card dashboard-card">
+                <div class="card-header">Qualité des données</div>
+                <div class="card-body">
+                    <div id="qualityChart" class="chart-box-sm"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-xl-7">
+            <div class="card dashboard-card table-card">
+                <div class="card-header">Résumé qualité / complétude</div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Indicateur</th>
+                                    <th>Valeur</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Messages sans date</td>
+                                    <td>{{ quality_stats.missing_sent_at }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Messages sans expéditeur</td>
+                                    <td>{{ quality_stats.missing_sender_email }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Messages sans sujet</td>
+                                    <td>{{ quality_stats.missing_subject }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Messages sans Message-ID</td>
+                                    <td>{{ quality_stats.missing_message_id }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Messages en erreur de parsing</td>
+                                    <td>{{ quality_stats.parse_error_count }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+
+{{ mails_per_month|json_script:"mails-per-month-data" }}
+{{ top_senders|json_script:"top-senders-data" }}
+{{ top_domains|json_script:"top-domains-data" }}
+{{ top_mailboxes|json_script:"top-mailboxes-data" }}
+{{ top_folders|json_script:"top-folders-data" }}
+{{ hourly_distribution|json_script:"hourly-distribution-data" }}
+{{ weekday_distribution|json_script:"weekday-distribution-data" }}
+{{ attachment_distribution|json_script:"attachment-distribution-data" }}
+{{ depth_distribution|json_script:"depth-distribution-data" }}
+{{ quoted_distribution|json_script:"quoted-distribution-data" }}
+{{ quality_stats|json_script:"quality-stats-data" }}
+{{ summary|json_script:"summary-data" }}
+
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>
+    const mailsPerMonth = JSON.parse(document.getElementById("mails-per-month-data").textContent);
+    const topSenders = JSON.parse(document.getElementById("top-senders-data").textContent);
+    const topDomains = JSON.parse(document.getElementById("top-domains-data").textContent);
+    const topMailboxes = JSON.parse(document.getElementById("top-mailboxes-data").textContent);
+    const topFolders = JSON.parse(document.getElementById("top-folders-data").textContent);
+    const hourlyDistribution = JSON.parse(document.getElementById("hourly-distribution-data").textContent);
+    const depthDistribution = JSON.parse(document.getElementById("depth-distribution-data").textContent);
+    const quotedDistribution = JSON.parse(document.getElementById("quoted-distribution-data").textContent);
+    const qualityStats = JSON.parse(document.getElementById("quality-stats-data").textContent);
+    const summary = JSON.parse(document.getElementById("summary-data").textContent);
+
+    function safeChartInit(id) {
+        const el = document.getElementById(id);
+        if (!el) return null;
+        return echarts.init(el);
+    }
+
+    function buildEmptyStateOption(title) {
+        return {
+            title: {
+                text: title,
+                left: "center",
+                top: "middle",
+                textStyle: {
+                    fontSize: 14,
+                    fontWeight: "normal",
+                    color: "#6c757d"
+                }
+            }
+        };
+    }
+
+    const monthLabels = mailsPerMonth.map(row => String(row.month).slice(0, 7));
+    const monthCounts = mailsPerMonth.map(row => row.message_count);
+    const responseCounts = mailsPerMonth.map(row => row.response_count || 0);
+    const forwardCounts = mailsPerMonth.map(row => row.forward_count || 0);
+    const attachmentMonthCounts = mailsPerMonth.map(row => row.attachment_count || 0);
+
+    const senderLabels = topSenders.map(row => row.sender_label);
+    const senderCounts = topSenders.map(row => row.message_count);
+
+    const domainLabels = topDomains.map(row => row["sender__domain"] || "(unknown)");
+    const domainCounts = topDomains.map(row => row.message_count);
+
+    const mailboxLabels = topMailboxes.map(row => row["mailbox__mailbox_key"] || "(unknown)");
+    const mailboxCounts = topMailboxes.map(row => row.message_count);
+
+    const folderLabels = topFolders.map(row => row["folder__folder_path"] || "(unknown)");
+    const folderCounts = topFolders.map(row => row.message_count);
+
+    const hourLabels = hourlyDistribution.map(row => `${row.hour}h`);
+    const hourCounts = hourlyDistribution.map(row => row.message_count);
+
+    const depthLabels = depthDistribution.map(row => String(row.references_depth));
+    const depthCounts = depthDistribution.map(row => row.message_count);
+
+    const quotedLabels = quotedDistribution.map(row => String(row.quoted_line_count));
+    const quotedCounts = quotedDistribution.map(row => row.message_count);
+
+    const charts = [];
+
+    const messagesPerMonthChart = safeChartInit("messagesPerMonthChart");
+    if (messagesPerMonthChart) {
+        charts.push(messagesPerMonthChart);
+        if (monthLabels.length) {
+            messagesPerMonthChart.setOption({
+                tooltip: { trigger: "axis" },
+                grid: { left: 50, right: 20, top: 30, bottom: 60 },
+                xAxis: {
+                    type: "category",
+                    data: monthLabels,
+                    axisLabel: { rotate: 45 }
+                },
+                yAxis: {
+                    type: "value",
+                    name: "Messages"
+                },
+                series: [{
+                    name: "Messages",
+                    data: monthCounts,
+                    type: "line",
+                    smooth: true,
+                    areaStyle: {}
+                }]
+            });
+        } else {
+            messagesPerMonthChart.setOption(buildEmptyStateOption("Aucune donnée disponible"));
+        }
+    }
+
+    const attachmentsDonutChart = safeChartInit("attachmentsDonutChart");
+    if (attachmentsDonutChart) {
+        charts.push(attachmentsDonutChart);
+        attachmentsDonutChart.setOption({
+            tooltip: { trigger: "item" },
+            legend: { bottom: 0 },
+            series: [{
+                name: "Pièces jointes",
+                type: "pie",
+                radius: ["45%", "72%"],
+                avoidLabelOverlap: false,
+                label: { show: true, formatter: "{b}\n{d}%" },
+                data: [
+                    { value: Number(summary.with_attachments_rate || 0), name: "Avec PJ (%)" },
+                    { value: Math.max(0, 100 - Number(summary.with_attachments_rate || 0)), name: "Sans PJ (%)" }
+                ]
+            }]
+        });
+    }
+
+    const responsesForwardsChart = safeChartInit("responsesForwardsChart");
+    if (responsesForwardsChart) {
+        charts.push(responsesForwardsChart);
+        if (monthLabels.length) {
+            responsesForwardsChart.setOption({
+                tooltip: { trigger: "axis" },
+                legend: { top: 0 },
+                grid: { left: 50, right: 20, top: 40, bottom: 60 },
+                xAxis: {
+                    type: "category",
+                    data: monthLabels,
+                    axisLabel: { rotate: 45 }
+                },
+                yAxis: { type: "value" },
+                series: [
+                    { name: "Réponses", type: "bar", stack: "total", data: responseCounts },
+                    { name: "Forwards", type: "bar", stack: "total", data: forwardCounts },
+                    { name: "Avec PJ", type: "line", data: attachmentMonthCounts, smooth: true }
+                ]
+            });
+        } else {
+            responsesForwardsChart.setOption(buildEmptyStateOption("Aucune donnée disponible"));
+        }
+    }
+
+    const topSendersChart = safeChartInit("topSendersChart");
+    if (topSendersChart) {
+        charts.push(topSendersChart);
+        if (senderLabels.length) {
+            topSendersChart.setOption({
+                tooltip: { trigger: "axis" },
+                grid: { left: 140, right: 20, top: 20, bottom: 20 },
+                xAxis: { type: "value" },
+                yAxis: {
+                    type: "category",
+                    data: senderLabels,
+                    inverse: true
+                },
+                series: [{
+                    name: "Messages",
+                    type: "bar",
+                    data: senderCounts
+                }]
+            });
+        } else {
+            topSendersChart.setOption(buildEmptyStateOption("Aucune donnée disponible"));
+        }
+    }
+
+    const hourlyChart = safeChartInit("hourlyChart");
+    if (hourlyChart) {
+        charts.push(hourlyChart);
+        if (hourLabels.length) {
+            hourlyChart.setOption({
+                tooltip: { trigger: "axis" },
+                grid: { left: 40, right: 20, top: 20, bottom: 40 },
+                xAxis: { type: "category", data: hourLabels },
+                yAxis: { type: "value" },
+                series: [{
+                    name: "Messages",
+                    type: "bar",
+                    data: hourCounts
+                }]
+            });
+        } else {
+            hourlyChart.setOption(buildEmptyStateOption("Aucune donnée disponible"));
+        }
+    }
+
+    const depthChart = safeChartInit("depthChart");
+    if (depthChart) {
+        charts.push(depthChart);
+        if (depthLabels.length) {
+            depthChart.setOption({
+                tooltip: { trigger: "axis" },
+                grid: { left: 40, right: 20, top: 20, bottom: 40 },
+                xAxis: { type: "category", data: depthLabels },
+                yAxis: { type: "value" },
+                series: [{
+                    name: "Messages",
+                    type: "bar",
+                    data: depthCounts
+                }]
+            });
+        } else {
+            depthChart.setOption(buildEmptyStateOption("Aucune donnée disponible"));
+        }
+    }
+
+    const quotedChart = safeChartInit("quotedChart");
+    if (quotedChart) {
+        charts.push(quotedChart);
+        if (quotedLabels.length) {
+            quotedChart.setOption({
+                tooltip: { trigger: "axis" },
+                grid: { left: 40, right: 20, top: 20, bottom: 40 },
+                xAxis: { type: "category", data: quotedLabels },
+                yAxis: { type: "value" },
+                series: [{
+                    name: "Messages",
+                    type: "bar",
+                    data: quotedCounts
+                }]
+            });
+        } else {
+            quotedChart.setOption(buildEmptyStateOption("Aucune donnée disponible"));
+        }
+    }
+
+    const topDomainsChart = safeChartInit("topDomainsChart");
+    if (topDomainsChart) {
+        charts.push(topDomainsChart);
+        if (domainLabels.length) {
+            topDomainsChart.setOption({
+                tooltip: { trigger: "axis" },
+                grid: { left: 110, right: 20, top: 20, bottom: 20 },
+                xAxis: { type: "value" },
+                yAxis: {
+                    type: "category",
+                    data: domainLabels,
+                    inverse: true
+                },
+                series: [{
+                    name: "Messages",
+                    type: "bar",
+                    data: domainCounts
+                }]
+            });
+        } else {
+            topDomainsChart.setOption(buildEmptyStateOption("Aucune donnée disponible"));
+        }
+    }
+
+    const topMailboxesChart = safeChartInit("topMailboxesChart");
+    if (topMailboxesChart) {
+        charts.push(topMailboxesChart);
+        if (mailboxLabels.length) {
+            topMailboxesChart.setOption({
+                tooltip: { trigger: "axis" },
+                grid: { left: 120, right: 20, top: 20, bottom: 20 },
+                xAxis: { type: "value" },
+                yAxis: {
+                    type: "category",
+                    data: mailboxLabels,
+                    inverse: true
+                },
+                series: [{
+                    name: "Occurrences",
+                    type: "bar",
+                    data: mailboxCounts
+                }]
+            });
+        } else {
+            topMailboxesChart.setOption(buildEmptyStateOption("Aucune donnée disponible"));
+        }
+    }
+
+    const topFoldersChart = safeChartInit("topFoldersChart");
+    if (topFoldersChart) {
+        charts.push(topFoldersChart);
+        if (folderLabels.length) {
+            topFoldersChart.setOption({
+                tooltip: { trigger: "axis" },
+                grid: { left: 160, right: 20, top: 20, bottom: 20 },
+                xAxis: { type: "value" },
+                yAxis: {
+                    type: "category",
+                    data: folderLabels,
+                    inverse: true
+                },
+                series: [{
+                    name: "Occurrences",
+                    type: "bar",
+                    data: folderCounts
+                }]
+            });
+        } else {
+            topFoldersChart.setOption(buildEmptyStateOption("Aucune donnée disponible"));
+        }
+    }
+
+    const qualityChart = safeChartInit("qualityChart");
+    if (qualityChart) {
+        charts.push(qualityChart);
+        qualityChart.setOption({
+            tooltip: { trigger: "axis" },
+            grid: { left: 140, right: 20, top: 20, bottom: 20 },
+            xAxis: { type: "value" },
+            yAxis: {
+                type: "category",
+                data: [
+                    "Sans date",
+                    "Sans expéditeur",
+                    "Sans sujet",
+                    "Sans Message-ID",
+                    "Parse error"
+                ],
+                inverse: true
+            },
+            series: [{
+                name: "Messages",
+                type: "bar",
+                data: [
+                    qualityStats.missing_sent_at || 0,
+                    qualityStats.missing_sender_email || 0,
+                    qualityStats.missing_subject || 0,
+                    qualityStats.missing_message_id || 0,
+                    qualityStats.parse_error_count || 0
+                ]
+            }]
+        });
+    }
+
+    window.addEventListener("resize", function () {
+        charts.forEach(chart => chart.resize());
+    });
+</script>
 {% endblock %}

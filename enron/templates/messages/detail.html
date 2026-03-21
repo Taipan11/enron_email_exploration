@@ -2,178 +2,289 @@
 
 {% block content %}
 <div class="container mt-4">
-    <div class="mb-3">
-        <a href="{% url 'folder_detail' occurrence.folder_id %}" class="btn btn-outline-secondary btn-sm">
-            ← Retour au folder
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            {% if occurrences %}
+                <a href="{% url 'folder_detail' occurrences.0.folder_id %}" class="btn btn-outline-secondary btn-sm">
+                    ← Voir le folder
+                </a>
+            {% else %}
+                <a href="{% url 'message_list' %}" class="btn btn-outline-secondary btn-sm">
+                    ← Retour à la recherche
+                </a>
+            {% endif %}
+        </div>
+
+        <a href="{% url 'message_thread' message.id %}" class="btn btn-primary btn-sm">
+            Voir la conversation complète
         </a>
     </div>
 
-    <h1 class="mb-4">
-        {{ occurrence.subject_normalized|default:"(sans sujet)" }}
-    </h1>
-    <div class="mb-3">
-    <a href="{% url 'message_thread' occurrence.message_pk %}" class="btn btn-primary btn-sm">
-        Voir la conversation complète
-    </a>
-</div>
-    <div class="card mb-4">
-        <div class="card-header">Contexte de l'occurrence</div>
-        <div class="card-body">
-            <p><strong>Occurrence ID :</strong> {{ occurrence.occurrence_id }}</p>
-            <p><strong>Source file :</strong> {{ occurrence.source_file }}</p>
-            <p>
-                <strong>Validation :</strong>
-                {% if occurrence.validation_is_valid %}
-                    <span class="badge bg-success">Valide</span>
-                {% else %}
-                    <span class="badge bg-warning text-dark">À vérifier</span>
-                {% endif %}
-            </p>
-            <p><strong>Mailbox :</strong> {{ occurrence.mailbox_key }}</p>
-            <p><strong>Folder :</strong> {{ occurrence.folder_name }} ({{ occurrence.folder_path }})</p>
-            <p><strong>Folder type :</strong> {{ occurrence.folder_type|default:"-" }}</p>
-            <p><strong>Folder topic :</strong> {{ occurrence.folder_topic|default:"-" }}</p>
-            <p>
-                <strong>Collaborateur :</strong>
-                {% if occurrence.collaborator_id %}
-                    <a href="{% url 'collaborator_detail' occurrence.collaborator_id %}">
-                        {{ occurrence.collaborator_display_name|default:occurrence.employee_key }}
-                    </a>
-                {% else %}
-                    -
-                {% endif %}
-            </p>
-            
+    <div class="mb-4">
+        <h1 class="mb-2">{{ message.subject_normalized|default:"(sans sujet)" }}</h1>
+        <div class="text-muted small">
+            <span class="me-3"><strong>Expéditeur :</strong> {{ message.sender_email|default:"-" }}</span>
+            <span class="me-3"><strong>Date :</strong> {{ message.sent_at|default:"-" }}</span>
+            <span><strong>Message PK :</strong> {{ message.id }}</span>
         </div>
     </div>
 
-    <div class="card mb-4">
-        <div class="card-header">Métadonnées du message</div>
-        <div class="card-body">
-            <p><strong>Message PK :</strong> {{ occurrence.message_pk }}</p>
-            <p><strong>Message-ID :</strong> {{ occurrence.message_id }}</p>
-            <p><strong>Date d'envoi :</strong> {{ occurrence.sent_at|default:"-" }}</p>
-            <p><strong>Expéditeur :</strong> {{ occurrence.sender_email|default:"-" }}</p>
-            <p><strong>MIME type :</strong> {{ occurrence.mime_type|default:"-" }}</p>
-            <p><strong>Content-Type header :</strong> {{ occurrence.content_type_header|default:"-" }}</p>
-            <p><strong>In-Reply-To :</strong> {{ occurrence.in_reply_to|default:"-" }}</p>
-            <p><strong>Response to :</strong> {{ occurrence.response_to_message_id|default:"-" }}</p>
-            <p><strong>Thread root :</strong> {{ occurrence.thread_root_message_id|default:"-" }}</p>
-        </div>
-    </div>
-
-    <div class="card mb-4">
-        <div class="card-header">Indicateurs</div>
-        <div class="card-body">
-            <p><strong>Pièces jointes :</strong> {% if occurrence.has_attachments %}Oui ({{ occurrence.attachment_count }}){% else %}Non{% endif %}</p>
-            <p><strong>Parse OK :</strong> {% if occurrence.parse_ok %}Oui{% else %}Non{% endif %}</p>
-            <p><strong>Réponse :</strong> {% if occurrence.is_response %}Oui{% else %}Non{% endif %}</p>
-            <p><strong>Forward :</strong> {% if occurrence.is_forward %}Oui{% else %}Non{% endif %}</p>
-            <p><strong>References depth :</strong> {{ occurrence.references_depth }}</p>
-            <p><strong>Quoted line count :</strong> {{ occurrence.quoted_line_count }}</p>
-        </div>
-    </div>
-
-    <div class="card mb-4">
-        <div class="card-header">Destinataires</div>
-        <div class="card-body">
-            <p><strong>To :</strong></p>
-            {% if recipients_by_type.to %}
-                <ul>
-                    {% for r in recipients_by_type.to %}
-                        <li>{{ r.email }}{% if r.display_name %} — {{ r.display_name }}{% endif %}</li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p class="text-muted">Aucun destinataire To.</p>
-            {% endif %}
-
-            <p><strong>Cc :</strong></p>
-            {% if recipients_by_type.cc %}
-                <ul>
-                    {% for r in recipients_by_type.cc %}
-                        <li>{{ r.email }}{% if r.display_name %} — {{ r.display_name }}{% endif %}</li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p class="text-muted">Aucun destinataire Cc.</p>
-            {% endif %}
-
-            <p><strong>Bcc :</strong></p>
-            {% if recipients_by_type.bcc %}
-                <ul>
-                    {% for r in recipients_by_type.bcc %}
-                        <li>{{ r.email }}{% if r.display_name %} — {{ r.display_name }}{% endif %}</li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p class="text-muted">Aucun destinataire Bcc.</p>
-            {% endif %}
-        </div>
-    </div>
-
-    <div class="card mb-4">
-        <div class="card-header">Pièces jointes</div>
-        <div class="card-body">
-            {% if attachments %}
-                <div class="table-responsive">
-                    <table class="table table-sm table-striped">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Nom fichier</th>
-                                <th>Type MIME</th>
-                                <th>Taille</th>
-                                <th>SHA256</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for a in attachments %}
-                            <tr>
-                                <td>{{ a.id }}</td>
-                                <td>{{ a.filename|default:"-" }}</td>
-                                <td>{{ a.mime_type|default:"-" }}</td>
-                                <td>{{ a.size_bytes|default:"-" }}</td>
-                                <td>{{ a.sha256|default:"-" }}</td>
-                            </tr>
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header">Occurrences</div>
+                <div class="card-body">
+                    {% if occurrences %}
+                        <ul class="list-group list-group-flush">
+                            {% for occ in occurrences %}
+                                <li class="list-group-item px-0">
+                                    <div><strong>Occurrence ID :</strong> {{ occ.id }}</div>
+                                    <div><strong>Source file :</strong> <span class="text-break">{{ occ.source_file|default:"-" }}</span></div>
+                                    <div><strong>Folder :</strong>
+                                        {% if occ.folder_id %}
+                                            <a href="{% url 'folder_detail' occ.folder_id %}">
+                                                {{ occ.folder_name|default:"-" }}
+                                            </a>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </div>
+                                    <div><strong>Folder path :</strong> <span class="text-break">{{ occ.folder_path|default:"-" }}</span></div>
+                                    <div><strong>Mailbox :</strong> {{ occ.mailbox_key|default:"-" }}</div>
+                                    <div><strong>Collaborateur :</strong> {{ occ.collaborator_display_name|default:"-" }}</div>
+                                </li>
                             {% endfor %}
-                        </tbody>
-                    </table>
+                        </ul>
+                    {% else %}
+                        <p class="text-muted mb-0">Aucune occurrence.</p>
+                    {% endif %}
                 </div>
-            {% else %}
-                <p class="text-muted mb-0">Aucune pièce jointe.</p>
-            {% endif %}
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">Métadonnées du message</div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Message-ID</dt>
+                        <dd class="col-sm-7 text-break">{{ message.message_id|default:"-" }}</dd>
+
+                        <dt class="col-sm-5">MIME type</dt>
+                        <dd class="col-sm-7">{{ message.mime_type|default:"-" }}</dd>
+
+                        <dt class="col-sm-5">Content-Type</dt>
+                        <dd class="col-sm-7 text-break">{{ message.content_type_header|default:"-" }}</dd>
+
+                        <dt class="col-sm-5">In-Reply-To</dt>
+                        <dd class="col-sm-7 text-break">{{ message.in_reply_to|default:"-" }}</dd>
+
+                        <dt class="col-sm-5">Response to</dt>
+                        <dd class="col-sm-7 text-break">{{ message.response_to_message_id|default:"-" }}</dd>
+
+                        <dt class="col-sm-5">Thread root</dt>
+                        <dd class="col-sm-7 text-break">{{ message.thread_root_message_id|default:"-" }}</dd>
+                    </dl>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">Indicateurs</div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-7">Pièces jointes</dt>
+                        <dd class="col-sm-5">
+                            {% if message.has_attachments %}
+                                Oui ({{ message.attachment_count }})
+                            {% else %}
+                                Non
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-sm-7">Parse OK</dt>
+                        <dd class="col-sm-5">{% if message.parse_ok %}Oui{% else %}Non{% endif %}</dd>
+
+                        <dt class="col-sm-7">Réponse</dt>
+                        <dd class="col-sm-5">{% if message.is_response %}Oui{% else %}Non{% endif %}</dd>
+
+                        <dt class="col-sm-7">Forward</dt>
+                        <dd class="col-sm-5">{% if message.is_forward %}Oui{% else %}Non{% endif %}</dd>
+
+                        <dt class="col-sm-7">References depth</dt>
+                        <dd class="col-sm-5">{{ message.references_depth }}</dd>
+
+                        <dt class="col-sm-7">Quoted line count</dt>
+                        <dd class="col-sm-5">{{ message.quoted_line_count }}</dd>
+
+                        <dt class="col-sm-7">HTML disponible</dt>
+                        <dd class="col-sm-5">
+                            {% if message.body_html_clean %}
+                                <span class="badge bg-info text-dark">Oui</span>
+                            {% else %}
+                                <span class="text-muted">Non</span>
+                            {% endif %}
+                        </dd>
+                    </dl>
+                </div>
+            </div>
         </div>
-    </div>
 
-    <div class="card mb-4">
-        <div class="card-header">Références</div>
-        <div class="card-body">
-            {% if references %}
-                <ul class="mb-0">
-                    {% for ref in references %}
-                        <li>{{ ref.referenced_message_id }}</li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p class="text-muted mb-0">Aucune référence.</p>
-            {% endif %}
-        </div>
-    </div>
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header">Destinataires</div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>To</strong>
+                        {% if recipients_by_type.to %}
+                            <ul class="mt-2 mb-0">
+                                {% for r in recipients_by_type.to %}
+                                    <li>{{ r.email }}{% if r.display_name %} — {{ r.display_name }}{% endif %}</li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p class="text-muted mt-2 mb-0">Aucun destinataire To.</p>
+                        {% endif %}
+                    </div>
 
-    <div class="card mb-4">
-        <div class="card-header">Corps du message</div>
-        <div class="card-body">
-            <p><strong>Body clean :</strong></p>
-            <pre class="bg-light p-3 rounded" style="white-space: pre-wrap;">{{ occurrence.body_clean|default:"-" }}</pre>
+                    <div class="mb-3">
+                        <strong>Cc</strong>
+                        {% if recipients_by_type.cc %}
+                            <ul class="mt-2 mb-0">
+                                {% for r in recipients_by_type.cc %}
+                                    <li>{{ r.email }}{% if r.display_name %} — {{ r.display_name }}{% endif %}</li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p class="text-muted mt-2 mb-0">Aucun destinataire Cc.</p>
+                        {% endif %}
+                    </div>
 
-            <p class="mt-3"><strong>Signature :</strong></p>
-            <pre class="bg-light p-3 rounded" style="white-space: pre-wrap;">{{ occurrence.signature|default:"-" }}</pre>
+                    <div class="mb-0">
+                        <strong>Bcc</strong>
+                        {% if recipients_by_type.bcc %}
+                            <ul class="mt-2 mb-0">
+                                {% for r in recipients_by_type.bcc %}
+                                    <li>{{ r.email }}{% if r.display_name %} — {{ r.display_name }}{% endif %}</li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p class="text-muted mt-2 mb-0">Aucun destinataire Bcc.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
 
-            {% if occurrence.parse_error %}
-                <p class="mt-3"><strong>Parse error :</strong></p>
-                <pre class="bg-light p-3 rounded text-danger" style="white-space: pre-wrap;">{{ occurrence.parse_error }}</pre>
-            {% endif %}
+            <div class="card mb-4">
+                <div class="card-header">Pièces jointes</div>
+                <div class="card-body">
+                    {% if attachments %}
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Nom fichier</th>
+                                        <th>Type MIME</th>
+                                        <th>Taille</th>
+                                        <th>SHA256</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for a in attachments %}
+                                    <tr>
+                                        <td>{{ a.id }}</td>
+                                        <td>{{ a.filename|default:"-" }}</td>
+                                        <td>{{ a.mime_type|default:"-" }}</td>
+                                        <td>{{ a.size_bytes|default:"-" }}</td>
+                                        <td class="text-break small">{{ a.sha256|default:"-" }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">Aucune pièce jointe.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">Références</div>
+                <div class="card-body">
+                    {% if references %}
+                        <ul class="mb-0">
+                            {% for ref in references %}
+                                <li class="text-break">{{ ref.referenced_message_id }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted mb-0">Aucune référence.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">Corps du message</div>
+                <div class="card-body">
+                    <ul class="nav nav-tabs" id="messageBodyTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="text-tab" data-bs-toggle="tab" data-bs-target="#text-pane" type="button" role="tab">
+                                Body clean
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="signature-tab" data-bs-toggle="tab" data-bs-target="#signature-pane" type="button" role="tab">
+                                Signature
+                            </button>
+                        </li>
+                        {% if message.body_html_clean %}
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="html-render-tab" data-bs-toggle="tab" data-bs-target="#html-render-pane" type="button" role="tab">
+                                HTML rendu
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="html-source-tab" data-bs-toggle="tab" data-bs-target="#html-source-pane" type="button" role="tab">
+                                HTML source
+                            </button>
+                        </li>
+                        {% endif %}
+                        {% if message.parse_error %}
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="error-tab" data-bs-toggle="tab" data-bs-target="#error-pane" type="button" role="tab">
+                                Parse error
+                            </button>
+                        </li>
+                        {% endif %}
+                    </ul>
+
+                    <div class="tab-content border border-top-0 rounded-bottom p-3 bg-white" id="messageBodyTabsContent">
+                        <div class="tab-pane fade show active" id="text-pane" role="tabpanel">
+                            <pre class="bg-light p-3 rounded mb-0" style="white-space: pre-wrap;">{{ message.body_clean|default:"-" }}</pre>
+                        </div>
+
+                        <div class="tab-pane fade" id="signature-pane" role="tabpanel">
+                            <pre class="bg-light p-3 rounded mb-0" style="white-space: pre-wrap;">{{ message.signature|default:"-" }}</pre>
+                        </div>
+
+                        {% if message.body_html_clean %}
+                        <div class="tab-pane fade" id="html-render-pane" role="tabpanel">
+                            <div class="border rounded p-3 bg-light overflow-auto">
+                                {{ message.body_html_clean|safe }}
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="html-source-pane" role="tabpanel">
+                            <pre class="bg-light p-3 rounded mb-0 text-break" style="white-space: pre-wrap;">{{ message.body_html_clean }}</pre>
+                        </div>
+                        {% endif %}
+
+                        {% if message.parse_error %}
+                        <div class="tab-pane fade" id="error-pane" role="tabpanel">
+                            <pre class="bg-light p-3 rounded text-danger mb-0" style="white-space: pre-wrap;">{{ message.parse_error }}</pre>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>

@@ -17,8 +17,8 @@ class EmailThreadInferenceService:
     Il consomme seulement des champs déjà extraits et normalisés.
 
     Sémantique:
-    - is_response: réponse confirmée par un parent explicite
-      (in_reply_to ou references)
+    - is_response: réponse explicite ou déduite avec forte confiance
+      (in_reply_to, references, ou préfixe de sujet de type RE:)
     - looks_like_response: réponse probable selon signaux faibles
       (sujet, body, lignes citées)
     - is_forward: transfert probable détecté via sujet/body
@@ -74,11 +74,15 @@ class EmailThreadInferenceService:
             thread_root_message_id = message_id_normalized
             decision_notes.append("thread root defaulted to current message_id")
 
-        is_response = response_to_message_id is not None
+        explicit_parent = response_to_message_id is not None
+
+        is_response = bool(
+            explicit_parent
+            or is_reply_by_subject
+        )
 
         looks_like_response = bool(
             is_response
-            or is_reply_by_subject
             or body_looks_like_reply
             or quoted_line_count > 0
             or bool(quoted_header_lines)
@@ -92,7 +96,7 @@ class EmailThreadInferenceService:
         references_depth = len(reference_ids)
 
         confidence = self._compute_confidence(
-            is_response=is_response,
+            has_explicit_parent=explicit_parent,  # parent explicite pour le score fort
             has_in_reply_to=bool(in_reply_to_normalized),
             references_depth=references_depth,
             is_reply_by_subject=is_reply_by_subject,
@@ -157,7 +161,7 @@ class EmailThreadInferenceService:
     def _compute_confidence(
         self,
         *,
-        is_response: bool,
+        has_explicit_parent: bool,
         has_in_reply_to: bool,
         references_depth: int,
         is_reply_by_subject: bool,
@@ -186,10 +190,10 @@ class EmailThreadInferenceService:
         if has_quoted_header_lines:
             score += 0.05
 
-        if not is_response and (is_reply_by_subject or body_looks_like_reply):
+        if not has_explicit_parent and (is_reply_by_subject or body_looks_like_reply):
             score = max(score, 0.35)
 
-        if is_forward and not is_response:
+        if is_forward and not has_explicit_parent:
             score = min(score, 0.40)
 
         return min(1.0, round(score, 3))

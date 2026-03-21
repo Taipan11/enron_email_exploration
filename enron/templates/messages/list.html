@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Recherche de messages</h1>
+
+    <form method="get" class="card card-body mb-4 shadow-sm">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Recherche full-text</label>
+                <input
+                    type="text"
+                    name="q"
+                    value="{{ q }}"
+                    class="form-control"
+                    placeholder="Sujet et contenu du message"
+                >
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Email expéditeur</label>
+                <input
+                    type="text"
+                    name="sender_email"
+                    value="{{ sender_email }}"
+                    class="form-control"
+                >
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Sujet</label>
+                <input
+                    type="text"
+                    name="subject"
+                    value="{{ subject }}"
+                    class="form-control"
+                >
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Message-ID</label>
+                <input
+                    type="text"
+                    name="message_id"
+                    value="{{ message_id }}"
+                    class="form-control"
+                >
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Thread root message ID</label>
+                <input
+                    type="text"
+                    name="thread_root_message_id"
+                    value="{{ thread_root_message_id }}"
+                    class="form-control"
+                >
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">In-Reply-To</label>
+                <input
+                    type="text"
+                    name="in_reply_to"
+                    value="{{ in_reply_to }}"
+                    class="form-control"
+                >
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">Date min</label>
+                <input
+                    type="datetime-local"
+                    name="sent_at_from"
+                    value="{{ sent_at_from }}"
+                    class="form-control"
+                >
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">Date max</label>
+                <input
+                    type="datetime-local"
+                    name="sent_at_to"
+                    value="{{ sent_at_to }}"
+                    class="form-control"
+                >
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">Pièces jointes</label>
+                <select name="has_attachments" class="form-select">
+                    <option value="" {% if not has_attachments %}selected{% endif %}>Tous</option>
+                    <option value="true" {% if has_attachments == "true" %}selected{% endif %}>Oui</option>
+                    <option value="false" {% if has_attachments == "false" %}selected{% endif %}>Non</option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">Parse OK</label>
+                <select name="parse_ok" class="form-select">
+                    <option value="" {% if not parse_ok %}selected{% endif %}>Tous</option>
+                    <option value="true" {% if parse_ok == "true" %}selected{% endif %}>Oui</option>
+                    <option value="false" {% if parse_ok == "false" %}selected{% endif %}>Non</option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">Réponse</label>
+                <select name="is_response" class="form-select">
+                    <option value="" {% if not is_response %}selected{% endif %}>Tous</option>
+                    <option value="true" {% if is_response == "true" %}selected{% endif %}>Oui</option>
+                    <option value="false" {% if is_response == "false" %}selected{% endif %}>Non</option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">Forward</label>
+                <select name="is_forward" class="form-select">
+                    <option value="" {% if not is_forward %}selected{% endif %}>Tous</option>
+                    <option value="true" {% if is_forward == "true" %}selected{% endif %}>Oui</option>
+                    <option value="false" {% if is_forward == "false" %}selected{% endif %}>Non</option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">HTML</label>
+                <select name="has_html" class="form-select">
+                    <option value="" {% if not has_html %}selected{% endif %}>Tous</option>
+                    <option value="true" {% if has_html == "true" %}selected{% endif %}>Oui</option>
+                    <option value="false" {% if has_html == "false" %}selected{% endif %}>Non</option>
+                </select>
+            </div>
+            
+            <div class="col-md-2">
+                <label class="form-label">PJ min</label>
+                <input type="number" min="0" name="attachment_count_min" value="{{ attachment_count_min }}" class="form-control">
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">PJ max</label>
+                <input type="number" min="0" name="attachment_count_max" value="{{ attachment_count_max }}" class="form-control">
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">Depth min</label>
+                <input type="number" min="0" name="references_depth_min" value="{{ references_depth_min }}" class="form-control">
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">Depth max</label>
+                <input type="number" min="0" name="references_depth_max" value="{{ references_depth_max }}" class="form-control">
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">Quoted min</label>
+                <input type="number" min="0" name="quoted_line_count_min" value="{{ quoted_line_count_min }}" class="form-control">
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">Quoted max</label>
+                <input type="number" min="0" name="quoted_line_count_max" value="{{ quoted_line_count_max }}" class="form-control">
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Tri</label>
+                <select name="ordering" class="form-select">
+                    <option value="-rank" {% if ordering == "-rank" %}selected{% endif %}>Pertinence</option>
+                    <option value="-sent_at" {% if ordering == "-sent_at" %}selected{% endif %}>Date décroissante</option>
+                    <option value="sent_at" {% if ordering == "sent_at" %}selected{% endif %}>Date croissante</option>
+                    <option value="sender_email" {% if ordering == "sender_email" %}selected{% endif %}>Expéditeur A-Z</option>
+                    <option value="-sender_email" {% if ordering == "-sender_email" %}selected{% endif %}>Expéditeur Z-A</option>
+                    <option value="subject_normalized" {% if ordering == "subject_normalized" %}selected{% endif %}>Sujet A-Z</option>
+                    <option value="-subject_normalized" {% if ordering == "-subject_normalized" %}selected{% endif %}>Sujet Z-A</option>
+                    <option value="attachment_count" {% if ordering == "attachment_count" %}selected{% endif %}>Nb PJ croissant</option>
+                    <option value="-attachment_count" {% if ordering == "-attachment_count" %}selected{% endif %}>Nb PJ décroissant</option>
+                    <option value="references_depth" {% if ordering == "references_depth" %}selected{% endif %}>Depth croissant</option>
+                    <option value="-references_depth" {% if ordering == "-references_depth" %}selected{% endif %}>Depth décroissant</option>
+                    <option value="quoted_line_count" {% if ordering == "quoted_line_count" %}selected{% endif %}>Quoted croissant</option>
+                    <option value="-quoted_line_count" {% if ordering == "-quoted_line_count" %}selected{% endif %}>Quoted décroissant</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="mt-3 d-flex gap-2">
+            <button type="submit" class="btn btn-primary">Rechercher</button>
+            <a href="{% url 'message_list' %}" class="btn btn-outline-secondary">Réinitialiser</a>
+        </div>
+    </form>
+
+    <p class="mb-3 text-muted">
+        <strong>{{ result_count }}</strong> résultat{{ result_count|pluralize }}
+    </p>
+
+    {% for row in messages %}
+    <div class="card mb-3 shadow-sm border-0">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start gap-3 mb-2">
+                <div>
+                    <h5 class="card-title mb-1">
+                        <a href="{% url 'message_detail' row.id %}" class="text-decoration-none">
+                            {% if q and row.headline_subject %}
+                                {{ row.headline_subject|safe }}
+                            {% else %}
+                                {{ row.subject_normalized|default:"(Sans sujet)" }}
+                            {% endif %}
+                        </a>
+                    </h5>
+
+                    <div class="text-muted small">
+                        <span class="me-3">
+                            <strong>De :</strong> {{ row.sender_email|default:"-" }}
+                        </span>
+                        <span class="me-3">
+                            <strong>Date :</strong>
+                            {% if row.sent_at %}
+                                {{ row.sent_at|date:"Y-m-d H:i" }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </span>
+                        <span class="me-3">
+                            <strong>Score :</strong>
+                            {% if q and row.rank %}{{ row.rank|floatformat:4 }}{% else %}-{% endif %}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="text-end small">
+                    {% if row.parse_ok %}
+                        <span class="badge bg-success">OK</span>
+                    {% else %}
+                        <span class="badge bg-danger">Erreur</span>
+                    {% endif %}
+
+                    {% if row.is_response %}
+                        <span class="badge bg-success">Réponse</span>
+                    {% endif %}
+
+                    {% if row.is_forward %}
+                        <span class="badge bg-warning text-dark">Forward</span>
+                    {% endif %}
+
+                    {% if row.has_attachments %}
+                        <span class="badge bg-info text-dark">
+                            {{ row.attachment_count }} PJ
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="mb-2 small text-muted">
+                <strong>Message-ID :</strong> {{ row.message_id }}
+            </div>
+
+            {% if q and row.headline_body %}
+            <div class="mb-3 p-3 bg-light rounded border">
+                <div class="small text-uppercase text-muted mb-1">Extrait correspondant</div>
+                <div class="mb-0">
+                    {{ row.headline_body|safe }}
+                </div>
+            </div>
+            {% endif %}
+
+            <div>
+                <div class="small text-uppercase text-muted mb-1">Aperçu du message</div>
+                <p class="mb-0 text-body">
+                    {{ row.body_clean|default:"-"|truncatechars:500 }}
+                </p>
+            </div>
+
+            <hr>
+
+            <div class="row small text-muted">
+                <div class="col-md-4 mb-1">
+                    <strong>In-Reply-To :</strong> {{ row.in_reply_to|default:"-" }}
+                </div>
+                <div class="col-md-4 mb-1">
+                    <strong>MIME :</strong> {{ row.mime_type|default:"-" }}
+                </div>
+                <div class="col-md-4 mb-1">
+                    <strong>Thread root :</strong> {{ row.thread_root_message_id|default:"-"|truncatechars:80 }}
+                </div>
+                <div class="col-md-4 mb-1">
+                    <strong>Depth :</strong> {{ row.references_depth }}
+                </div>
+                <div class="col-md-4 mb-1">
+                    <strong>Quoted :</strong> {{ row.quoted_line_count }}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="alert alert-light border text-muted">
+        Aucun message trouvé.
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

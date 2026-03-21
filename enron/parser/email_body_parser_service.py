@@ -7,24 +7,10 @@ from email.parser import BytesParser
 
 from enron.normalization.email_normalization_service import EmailNormalizationService
 from enron.normalization.email_signature_service import EmailSignatureService
+from enron.domain.email_payload import ParsedMessageBody
 
-from enron.domain.email_payload import (
-    ParsedMessageBody
-)
+
 class EmailBodyParserService:
-    """
-    Service dédié au parsing du corps du message.
-
-    Responsabilités:
-    - extraire le body depuis le MIME complet si possible
-    - choisir text/plain en priorité
-    - fallback sur text/html si nécessaire
-    - nettoyer le texte / html
-    - extraire la signature
-    - détecter grossièrement les lignes citées
-    - extraire un snippet et des mots-clés simples
-    """
-
     _QUOTED_LINE_RE = re.compile(r"^\s*>+")
     _ON_DATE_WROTE_RE = re.compile(r"^on .+ wrote:\s*$", re.IGNORECASE)
 
@@ -81,83 +67,81 @@ class EmailBodyParserService:
             if not text:
                 continue
 
-            if content_type == "text/plain":
-                plain_parts.append(text)
-            elif content_type == "text/html":
+            if content_type == "text/html":
                 html_parts.append(text)
+            elif content_type == "text/plain":
+                if self.normalizer.looks_like_html(text):
+                    html_parts.append(text)
+                else:
+                    plain_parts.append(text)
+            else:
+                if self.normalizer.looks_like_html(text):
+                    html_parts.append(text)
+                else:
+                    plain_parts.append(text)
 
-        if plain_parts:
-            plain_text = "\n".join(plain_parts)
-            return self._build_from_plain_text(
-                plain_text,
+        plain_text = "\n".join(plain_parts).strip() if plain_parts else None
+        html_text = "\n".join(html_parts).strip() if html_parts else None
+
+        if plain_text:
+            return self._build_from_parts(
+                plain_text=plain_text,
+                html_text=html_text,
                 has_plain_text_body=True,
-                has_html_body=bool(html_parts),
-                html_source="\n".join(html_parts) if html_parts else None,
+                has_html_body=bool(html_text),
             )
 
-        if html_parts:
-            html_text = "\n".join(html_parts)
-            return self._build_from_html(
-                html_text,
+        if html_text:
+            return self._build_from_parts(
+                plain_text=None,
+                html_text=html_text,
                 has_plain_text_body=False,
                 has_html_body=True,
             )
 
-        return ParsedMessageBody()
+        fallback_text = self._fallback_extract_body_from_raw(message.as_bytes())
+        if self.normalizer.looks_like_html(fallback_text):
+            return self._build_from_parts(
+                plain_text=None,
+                html_text=fallback_text,
+                has_plain_text_body=False,
+                has_html_body=True,
+            )
 
-    def _build_from_plain_text(
+        return self._build_from_parts(
+            plain_text=fallback_text,
+            html_text=None,
+            has_plain_text_body=bool(fallback_text),
+            has_html_body=False,
+        )
+
+    def _build_from_parts(
         self,
+        *,
         plain_text: str | None,
-        *,
-        has_plain_text_body: bool = True,
-        has_html_body: bool = False,
-        html_source: str | None = None,
-    ) -> ParsedMessageBody:
-        normalized_body = self.normalizer.clean_body_text(plain_text or "")
-        body_without_signature, signature = self.signature_service.split_signature(
-            normalized_body
-        )
-
-        quoted_text, quoted_line_count = self._extract_quoted_text(body_without_signature)
-        snippet = self._build_snippet(body_without_signature)
-        keywords = self._extract_keywords(body_without_signature)
-
-        html_clean = None
-        if html_source:
-            html_clean = self.normalizer.normalize_html_body(html_source)
-
-        return ParsedMessageBody(
-            body_raw=plain_text,
-            body_clean=body_without_signature,
-            body_html_clean=html_clean,
-            signature=signature,
-            has_html_body=has_html_body,
-            has_plain_text_body=has_plain_text_body,
-            quoted_text=quoted_text,
-            quoted_line_count=quoted_line_count,
-            keywords=keywords,
-            snippet=snippet,
-        )
-
-    def _build_from_html(
-        self,
-        html_text: str,
-        *,
+        html_text: str | None,
         has_plain_text_body: bool,
         has_html_body: bool,
     ) -> ParsedMessageBody:
-        html_clean = self.normalizer.normalize_html_body(html_text)
-        text_from_html = self.normalizer.clean_body_text(html_clean or "")
+        html_clean = self.normalizer.clean_html_for_storage(html_text) if html_text else None
+
+        if plain_text:
+            body_candidate = self.normalizer.clean_body_text(plain_text)
+        else:
+            body_candidate = self.normalizer.html_to_text(html_text)
+
         body_without_signature, signature = self.signature_service.split_signature(
-            text_from_html
+            body_candidate
         )
 
         quoted_text, quoted_line_count = self._extract_quoted_text(body_without_signature)
         snippet = self._build_snippet(body_without_signature)
         keywords = self._extract_keywords(body_without_signature)
 
+        raw_body = plain_text if plain_text is not None else html_text
+
         return ParsedMessageBody(
-            body_raw=html_text,
+            body_raw=raw_body,
             body_clean=body_without_signature,
             body_html_clean=html_clean,
             signature=signature,

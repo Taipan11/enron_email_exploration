@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from datetime import datetime
 from email.utils import getaddresses, parsedate_to_datetime
-
+import html
 
 class EmailNormalizationService:
     """
@@ -52,6 +52,21 @@ class EmailNormalizationService:
     _FORWARDED_MESSAGE_RE = re.compile(
         r"(?im)^\s*(?:begin forwarded message|[- ]*forwarded by|[- ]*forwarded message)\b"
     )
+
+
+    _HTML_DOCUMENT_RE = re.compile(r"(?is)<\s*(html|body|head|meta|table|tr|td|div|span|font|p|br)\b")
+    _HTML_ANY_TAG_RE = re.compile(r"(?s)<[a-zA-Z][^>]{0,200}>")
+    _HTML_SCRIPT_STYLE_RE = re.compile(r"(?is)<(script|style)\b[^>]*>.*?</\1>")
+    _HTML_COMMENT_RE = re.compile(r"(?is)<!--.*?-->")
+    _HTML_BR_RE = re.compile(r"(?i)<br\s*/?>")
+    _HTML_BLOCK_CLOSE_RE = re.compile(r"(?i)</(p|div|tr|table|li|ul|ol|h[1-6])\s*>")
+    _HTML_BLOCK_OPEN_RE = re.compile(r"(?i)<(p|div|tr|table|li|ul|ol|h[1-6])\b[^>]*>")
+    _HTML_TAG_RE = re.compile(r"(?s)<[^>]+>")
+
+    _HTML_EVENT_HANDLER_ATTR_RE = re.compile(r"""(?is)\s+on[a-z]+\s*=\s*(".*?"|'.*?'|[^\s>]+)""")
+    _HTML_JS_HREF_RE = re.compile(r"""(?is)(href|src)\s*=\s*("javascript:[^"]*"|'javascript:[^']*'|javascript:[^\s>]+)""")
+    _HTML_STYLE_ATTR_RE = re.compile(r"""(?is)\sstyle\s*=\s*(".*?"|'.*?')""")
+
     _QUOTED_HEADER_BLOCK_RE = re.compile(
         r"(?im)^\s*(from|sent|to|cc|bcc|subject|date)\s*:\s+.+$"
     )
@@ -391,32 +406,96 @@ class EmailNormalizationService:
         """
         return len(self.parse_address_header(header_value))
     
-    def normalize_html_body(self, value: str | None) -> str | None:
+    def looks_like_html(self, value: str | None) -> bool:
+        if not value:
+            return False
+
+        sample = value[:10000]
+
+        if self._HTML_DOCUMENT_RE.search(sample):
+            return True
+
+        if re.search(r"(?i)</?(html|body|div|span|table|tr|td|font|p|br|a)\b", sample):
+            return True
+
+        tags = self._HTML_ANY_TAG_RE.findall(sample)
+        if len(tags) >= 2:
+            return True
+
+        if re.search(r"&nbsp;|&lt;|&gt;|&amp;|&#\d+;", sample):
+            return True
+
+        return False
+
+    def clean_html_for_storage(self, value: str | None) -> str | None:
         """
-        Convertit un body HTML en texte simple puis le normalise.
+        Nettoie le HTML tout en le conservant comme HTML affichable.
+        But:
+        - retirer script/style/commentaires
+        - retirer handlers JS inline
+        - neutraliser javascript: dans href/src
+        - retirer styles inline trop bruités
         """
         if value is None:
             return None
 
         value = value.replace("\r\n", "\n").replace("\r", "\n")
+        value = self._HTML_COMMENT_RE.sub("", value)
+        value = self._HTML_SCRIPT_STYLE_RE.sub("", value)
+        value = self._HTML_EVENT_HANDLER_ATTR_RE.sub("", value)
+        value = self._HTML_JS_HREF_RE.sub(r"\1=\"#\"", value)
+        value = self._HTML_STYLE_ATTR_RE.sub("", value)
+        value = value.strip()
 
+        return value or None
+
+    def clean_html_for_storage(self, value: str | None) -> str | None:
+        """
+        Nettoie le HTML tout en le conservant comme HTML affichable.
+        But:
+        - retirer script/style/commentaires
+        - retirer handlers JS inline
+        - neutraliser javascript: dans href/src
+        - retirer styles inline trop bruités
+        """
+        if value is None:
+            return None
+
+        value = value.replace("\r\n", "\n").replace("\r", "\n")
+        value = self._HTML_COMMENT_RE.sub("", value)
+        value = self._HTML_SCRIPT_STYLE_RE.sub("", value)
+        value = self._HTML_EVENT_HANDLER_ATTR_RE.sub("", value)
+        value = self._HTML_JS_HREF_RE.sub(r"\1=\"#\"", value)
+        value = self._HTML_STYLE_ATTR_RE.sub("", value)
+        value = value.strip()
+
+        return value or None
+    
+    def html_to_text(self, value: str | None) -> str | None:
+        """
+        Convertit un body HTML en texte simple lisible.
+        """
+        if value is None:
+            return None
+
+        value = value.replace("\r\n", "\n").replace("\r", "\n")
+        value = self._HTML_COMMENT_RE.sub(" ", value)
         value = self._HTML_SCRIPT_STYLE_RE.sub(" ", value)
         value = self._HTML_BR_RE.sub("\n", value)
-        value = self._HTML_P_RE.sub("\n", value)
+        value = self._HTML_BLOCK_CLOSE_RE.sub("\n", value)
+        value = self._HTML_BLOCK_OPEN_RE.sub("\n", value)
         value = self._HTML_TAG_RE.sub(" ", value)
 
-        html_entities = {
-            "&nbsp;": " ",
-            "&amp;": "&",
-            "&lt;": "<",
-            "&gt;": ">",
-            "&quot;": '"',
-            "&#39;": "'",
-        }
-        for src, dst in html_entities.items():
-            value = value.replace(src, dst)
-
+        value = html.unescape(value)
         return self.clean_body_text(value)
+
+    def normalize_html_body(self, value: str | None) -> str | None:
+        """
+        Compat backward-compatible:
+        HTML -> texte normalisé
+        """
+        return self.html_to_text(value)
+
     
     def extract_email_localpart(self, email: str | None) -> str | None:
         if not email or "@" not in email:
@@ -494,3 +573,6 @@ class EmailNormalizationService:
             if self._QUOTED_HEADER_BLOCK_RE.match(line):
                 result.append(line.strip())
         return result
+    
+
+    

@@ -151,6 +151,7 @@ class MessagePayload:
 
     subject_normalized: str | None = None
     body_clean: str | None = None
+    body_html_clean: str | None = None
     signature: str | None = None
 
     mime_type: str | None = None
@@ -170,7 +171,9 @@ class MessagePayload:
     recipients: list[MessageRecipientPayload] = field(default_factory=list)
     references: list[MessageReferencePayload] = field(default_factory=list)
     attachments: list[AttachmentPayload] = field(default_factory=list)
-
+    
+    content_hash: str | None = None
+    canonical_hash: str | None = None
     def __post_init__(self) -> None:
         if self.parse_error:
             self.parse_error = self.parse_error.strip() or None
