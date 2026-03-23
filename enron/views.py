@@ -392,7 +392,6 @@ def collaborator_sent_messages(request, collaborator_id):
     })
 
 
-
 def message_thread(request, message_id):
     current_message_obj = get_object_or_404(
         Message.objects.all(),
@@ -435,6 +434,7 @@ def message_thread(request, message_id):
             "sender_email": message.sender_email,
             "sent_at": message.sent_at,
             "subject_normalized": message.subject_normalized,
+            "body_clean": message.body_clean,
             "in_reply_to": message.in_reply_to,
             "response_to_message_id": message.response_to_message_id,
             "thread_root_message_id": message.thread_root_message_id,
